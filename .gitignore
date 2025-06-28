@@ -1,0 +1,20 @@
+# Referentie bestanden - niet nodig voor GitHub
+*.jpg
+*.png
+*.vb
+CLAUDE.md
+tour-poule-website.html
+
+# Editor bestanden
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS bestanden
+.DS_Store
+Thumbs.db
+
+# Backup bestanden
+*.bak
+*.backup

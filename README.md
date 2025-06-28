@@ -13,7 +13,7 @@ Een moderne webapplicatie voor het beheren van je Tour de France wedpools. Uploa
 
 ## 🚀 Quick Start
 
-1. **Open de applicatie**: [Live Demo](https://your-username.github.io/tour-poule)
+1. **Open de applicatie**: [Live Demo](https://pahliai.github.io/TourPloeg) of open `index.html` lokaal
 2. **Download voorbeeld**: Ga naar Admin tab → Download Voorbeeld Excel
 3. **Upload je data**: Vul het Excel bestand in en upload
 
@@ -99,17 +99,21 @@ Trui      | Groen   | 5
 ### Local Development
 ```bash
 # Clone repository
-git clone https://github.com/your-username/tour-poule.git
-cd tour-poule
+git clone https://github.com/PahliAi/TourPloeg.git
+cd TourPloeg
 
 # Open in browser (geen build process nodig)
 open index.html
 ```
 
+### Bestandsoverzicht
+- **Voor GitHub**: `index.html`, `css/`, `js/`, `tdf.xlsx`, `README.md`
+- **Niet voor GitHub**: Referentie bestanden, screenshots, VBA macro's
+
 ### GitHub Pages Deployment
 1. Push naar main branch
 2. Settings → Pages → Deploy from branch → main
-3. Je app is live op: `https://your-username.github.io/tour-poule`
+3. Je app is live op: `https://pahliai.github.io/TourPloeg`
 
 ## 🛠️ Tech Stack
 
