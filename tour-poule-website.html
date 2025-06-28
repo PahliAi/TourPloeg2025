@@ -1,0 +1,2169 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tour de France Poule 2024</title>
+    <!-- SheetJS library voor Excel parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            min-height: 100vh;
+            color: #2c3e50;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #FFD700, #FF6B35, #FF8C00);
+            padding: 20px 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            backdrop-filter: blur(10px);
+            border-bottom: none;
+        }
+
+        .header h1 {
+            color: white;
+            font-size: 2.2em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .nav-tabs {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 15px;
+        }
+
+        .nav-tab {
+            background: rgba(255,255,255,0.15);
+            color: white;
+            border: 2px solid rgba(255,255,255,0.2);
+            padding: 12px 24px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            font-size: 0.95em;
+            backdrop-filter: blur(10px);
+        }
+
+        .nav-tab:hover {
+            background: rgba(255,255,255,0.25);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+        }
+
+        .nav-tab.active {
+            background: linear-gradient(135deg, #fff, #f8f9fa);
+            color: #667eea;
+            border-color: #667eea;
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .card {
+            background: rgba(255,255,255,0.95);
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            backdrop-filter: blur(20px);
+            margin-bottom: 25px;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .podium {
+            text-align: center;
+            padding: 30px 20px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border-radius: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .podium::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="20" cy="20" r="2" fill="rgba(255,255,255,0.1)"/><circle cx="80" cy="80" r="1" fill="rgba(255,255,255,0.1)"/><circle cx="60" cy="30" r="1.5" fill="rgba(255,255,255,0.1)"/></svg>');
+            pointer-events: none;
+        }
+
+        .podium h2 {
+            position: relative;
+            z-index: 2;
+            margin-bottom: 25px;
+            font-size: 1.4em;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+
+        .podium-places {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+
+        .podium-place {
+            text-align: center;
+            padding: 20px;
+            border-radius: 15px;
+            min-width: 160px;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255,255,255,0.3);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+        }
+
+        .podium-place.first {
+            background: linear-gradient(135deg, #FFD700, #FFA500);
+            color: white;
+        }
+
+        .podium-place.second {
+            background: linear-gradient(135deg, #C0C0C0, #A9A9A9);
+            color: white;
+        }
+
+        .podium-place.third {
+            background: linear-gradient(135deg, #CD7F32, #B8860B);
+            color: white;
+        }
+
+        .podium-number {
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .podium-name {
+            font-weight: 700;
+            font-size: 1.1em;
+            margin-bottom: 8px;
+            text-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+
+        .podium-points {
+            font-size: 0.9em;
+            opacity: 0.9;
+            font-weight: 500;
+        }
+
+        .table-container {
+            overflow: hidden;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            background: white;
+        }
+
+        .table-scroll {
+            overflow-x: auto;
+            overflow-y: auto;
+            max-height: 600px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 0;
+            background: white;
+        }
+
+        th, td {
+            padding: 15px 12px;
+            text-align: left;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            white-space: nowrap;
+        }
+
+        th {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.3);
+            font-size: 0.9em;
+            letter-spacing: 0.5px;
+        }
+
+        tr:nth-child(even) {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.02), rgba(246, 211, 101, 0.02));
+        }
+
+        tr:hover {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.08), rgba(246, 211, 101, 0.08));
+            transform: scale(1.002);
+            transition: all 0.3s ease;
+        }
+
+        .clickable {
+            cursor: pointer;
+            color: #FF6B35;
+            text-decoration: underline;
+        }
+
+        .clickable:hover {
+            color: #FF8C00;
+        }
+
+        .rider-dropped {
+            color: #999;
+            text-decoration: line-through;
+        }
+
+        .points-cell {
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .matrix-table {
+            font-size: 0.85em;
+        }
+
+        .matrix-table th {
+            writing-mode: vertical-lr;
+            text-orientation: mixed;
+            padding: 20px 8px;
+            font-size: 0.75em;
+            min-width: 60px;
+            max-width: 60px;
+            white-space: nowrap;
+        }
+
+        .matrix-table td {
+            text-align: center;
+            padding: 8px 4px;
+            position: relative;
+        }
+
+        .rider-selected {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+            font-weight: bold;
+            border-radius: 50%;
+            width: 25px;
+            height: 25px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 8px rgba(76, 175, 80, 0.4);
+        }
+
+        .matrix-container {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .matrix-scroll {
+            overflow: auto;
+            max-height: 70vh;
+        }
+
+        .dagoverwinningen-column {
+            background: linear-gradient(135deg, #1E90FF, #0066CC) !important;
+            color: white !important;
+            font-weight: bold !important;
+        }
+
+        .dagoverwinningen-column th {
+            background: linear-gradient(135deg, #1E90FF, #0066CC) !important;
+            color: white !important;
+        }
+
+        .detail-view {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .detail-content {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            max-width: 90%;
+            max-height: 90%;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            background: #FF6B35;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 35px;
+            height: 35px;
+            cursor: pointer;
+            font-size: 1.2em;
+        }
+
+        .file-upload {
+            border: 2px dashed #667eea;
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+            margin: 20px 0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(255,255,255,0.05);
+        }
+
+        .file-upload:hover {
+            border-color: #FF8C00;
+            background: rgba(255, 215, 0, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .file-upload input {
+            display: none;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 30px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 1em;
+            margin: 5px;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 30px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .stage-card {
+            background: linear-gradient(135deg, rgba(255,255,255,0.9), rgba(248,249,250,0.9));
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            border: 1px solid rgba(102, 126, 234, 0.1);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.05);
+        }
+
+        .stage-card h3 {
+            color: #667eea;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+
+        .story-section {
+            background: linear-gradient(135deg, rgba(255,255,255,0.95), rgba(248,249,250,0.95));
+            border-radius: 20px;
+            padding: 25px;
+            margin: 25px 0;
+            border-left: 5px solid #667eea;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+        }
+
+        .story-section h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .story-text {
+            line-height: 1.6;
+            font-size: 1.1em;
+        }
+
+        .stage-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        /* Excel View Styling */
+        .excel-tab-btn {
+            margin: 5px;
+            background: linear-gradient(135deg, #f5f5f5, #e0e0e0);
+            color: #333;
+            border: 1px solid #ccc;
+        }
+
+        .excel-tab-btn.active {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+        }
+
+        .excel-tab-content {
+            display: none;
+        }
+
+        .excel-tab-content.active {
+            display: block;
+        }
+
+        .excel-grid {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            font-size: 11px;
+            line-height: 1.2;
+            background: white;
+            border-collapse: collapse;
+            width: 100%;
+            overflow: auto;
+            max-height: 600px;
+        }
+
+        .excel-cell {
+            border: 1px solid #d0d0d0;
+            padding: 2px 4px;
+            min-width: 25px;
+            height: 20px;
+            text-align: center;
+            font-size: 10px;
+            position: relative;
+            white-space: nowrap;
+        }
+
+        .excel-header-cell {
+            background: linear-gradient(135deg, #f0f0f0, #e0e0e0);
+            font-weight: bold;
+            border: 1px solid #a0a0a0;
+        }
+
+        .excel-name-cell {
+            text-align: left;
+            padding-left: 8px;
+            min-width: 120px;
+            max-width: 120px;
+            font-size: 9px;
+        }
+
+        .excel-rider-row {
+            background: white;
+        }
+
+        .excel-rider-row:nth-child(even) {
+            background: #f8f8f8;
+        }
+
+        .excel-points-cell {
+            background: white;
+            font-weight: bold;
+        }
+
+        .excel-jersey-geel {
+            background: linear-gradient(45deg, #FFD700, #FFA500) !important;
+            color: #333 !important;
+            font-weight: bold;
+            position: relative;
+        }
+
+        .excel-jersey-blauw {
+            background: linear-gradient(45deg, #1E90FF, #0066CC) !important;
+            color: white !important;
+            font-weight: bold;
+            position: relative;
+        }
+
+        .excel-jersey-icon {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 8px;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+
+        .excel-totals-row {
+            background: linear-gradient(135deg, #FFE4B5, #FFDEAD);
+            font-weight: bold;
+            border-top: 2px solid #DAA520;
+        }
+
+        .excel-selected-cell {
+            background: linear-gradient(135deg, #4CAF50, #45a049) !important;
+            color: white !important;
+            font-weight: bold;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 { font-size: 1.8em; }
+            .nav-tabs { flex-direction: column; align-items: center; gap: 10px; }
+            .nav-tab { width: 250px; }
+            .dashboard-grid { grid-template-columns: 1fr; }
+            .detail-content { padding: 20px; margin: 10px; }
+            .matrix-scroll { font-size: 0.7em; }
+            .table-scroll { font-size: 0.8em; }
+            .podium-places { flex-direction: column; align-items: center; }
+            
+            /* Better mobile table handling */
+            .table-container { 
+                border-radius: 10px; 
+                box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            }
+            .table-scroll { 
+                max-height: 400px; 
+                font-size: 0.8em;
+            }
+            th, td { 
+                padding: 8px 6px; 
+                font-size: 0.85em;
+            }
+            
+            /* Matrix table mobile adjustments */
+            .matrix-table th {
+                font-size: 0.65em;
+                min-width: 40px;
+                max-width: 40px;
+                padding: 15px 4px;
+            }
+            .matrix-table td {
+                padding: 6px 2px;
+            }
+            
+            /* Smaller cards on mobile */
+            .card { 
+                padding: 15px; 
+                margin-bottom: 15px;
+            }
+            .podium-place { 
+                min-width: 120px; 
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🚴‍♂️ Tour de France Poule 2024</h1>
+        <div class="nav-tabs">
+            <button class="nav-tab active" onclick="showTab('home')">🏠 Home</button>
+            <button class="nav-tab" onclick="showTab('participants')">👥 Deelnemers Score</button>
+            <button class="nav-tab" onclick="showTab('riders')">🚴 Renners Score</button>
+            <button class="nav-tab" onclick="showTab('matrix')">📊 Renners Gekozen</button>
+            <button class="nav-tab" onclick="showTab('daily-prizes')">🏆 Dagprijzen</button>
+            <button class="nav-tab" onclick="showTab('excel-view')">📊 Excel View</button>
+            <button class="nav-tab" onclick="showTab('admin')">⚙️ Admin</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- HOME TAB -->
+        <div id="home" class="tab-content active">
+            <!-- Getting Started Section -->
+            <div class="card" id="gettingStarted" style="text-align: center; background: linear-gradient(135deg, #f093fb, #f5576c); color: white;">
+                <h2>🚀 Welkom bij je Tour de France Poule!</h2>
+                <p style="font-size: 1.1em; margin: 20px 0;">Om te beginnen heb je 1 Excel bestand nodig:</p>
+                <div style="text-align: center; margin: 30px 0;">
+                    <div style="background: rgba(255,255,255,0.2); padding: 20px; border-radius: 10px; max-width: 400px; margin: 0 auto;">
+                        <h3>📊 Excel Bestand</h3>
+                        <p>Eén Excel bestand met alle data:<br>Renners, Deelnemers, Punten, Uitslagen</p>
+                        <button class="btn" onclick="showTab('admin')" style="margin-top: 10px;">Go to Admin</button>
+                    </div>
+                </div>
+                <p style="margin-top: 20px;"><em>👆 Download eerst het voorbeeld Excel bestand in het Admin tabblad!</em></p>
+            </div>
+
+            <div class="dashboard-grid">
+                <!-- Daily Podium -->
+                <div class="card podium">
+                    <h2 id="dailyPodiumTitle">🔵 Dagpodium</h2>
+                    <div class="podium-places">
+                        <!-- Filled by JavaScript -->
+                    </div>
+                </div>
+
+                <!-- General Classification Podium -->
+                <div class="card podium">
+                    <h2>🟡 Algemeen Klassement</h2>
+                    <div class="podium-places">
+                        <!-- Filled by JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Daily Wins Podium -->
+                <div class="card podium">
+                    <h2>🏆 Meeste Dagoverwinningen</h2>
+                    <div class="podium-places">
+                        <!-- Filled by JavaScript -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stage Information -->
+            <div class="stage-info" id="stageInfoContainer" style="display: none;">
+                <div class="stage-card">
+                    <h3 id="currentStageTitle">🗓️ Vandaag</h3>
+                    <p id="currentStageName"><strong>-</strong></p>
+                    <p id="currentStageDetails">- | -</p>
+                    <p id="currentStageDescription">-</p>
+                </div>
+                <div class="stage-card">
+                    <h3 id="nextStageTitle">🗓️ Morgen</h3>
+                    <p id="nextStageName"><strong>-</strong></p>
+                    <p id="nextStageDetails">- | -</p>
+                    <p id="nextStageDescription">-</p>
+                </div>
+            </div>
+
+            <!-- Stories -->
+            <div class="story-section" id="todayStorySection" style="display: none;">
+                <h3>📰 Verhaal van Vandaag</h3>
+                <div class="story-text" id="todayStory">
+                    <!-- Filled by uploaded data -->
+                </div>
+            </div>
+
+            <div class="story-section" id="tomorrowStorySection" style="display: none;">
+                <h3>🔮 Vooruitblik op Morgen</h3>
+                <div class="story-text" id="tomorrowStory">
+                    <!-- Filled by uploaded data -->
+                </div>
+            </div>
+        </div>
+
+        <!-- PARTICIPANTS TAB -->
+        <div id="participants" class="tab-content">
+            <div class="card">
+                <h2>👥 Deelnemers Score</h2>
+                <div class="table-container">
+                    <div class="table-scroll">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Pos</th>
+                                    <th>Deelnemer</th>
+                                    <th>Totaal Punten</th>
+                                    <th>Dagoverwinningen</th>
+                                    <th>Laatste Etappe</th>
+                                    <th>Acties</th>
+                                </tr>
+                            </thead>
+                            <tbody id="participantsTable">
+                                <!-- Filled by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIDERS TAB -->
+        <div id="riders" class="tab-content">
+            <div class="card">
+                <h2>🚴 Renners Score</h2>
+                <div class="table-container">
+                    <div class="table-scroll">
+                        <table>
+                            <thead>
+                                <tr id="ridersTableHeader">
+                                    <th>Pos</th>
+                                    <th>Renner</th>
+                                    <th>Team</th>
+                                    <th>Totaal</th>
+                                    <th>Et 1</th>
+                                    <th>Et 2</th>
+                                    <th>Et 3</th>
+                                    <th>Et 4</th>
+                                    <th>Et 5</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ridersTable">
+                                <!-- Filled by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MATRIX TAB -->
+        <div id="matrix" class="tab-content">
+            <div class="card">
+                <h2>📊 Renners Gekozen Matrix</h2>
+                <p style="margin-bottom: 20px; font-style: italic; color: #667eea;">Moderne matrix view - scroll horizontaal en verticaal</p>
+                <div class="matrix-container">
+                    <div class="matrix-scroll">
+                        <table class="matrix-table">
+                            <thead id="matrixHeader">
+                                <!-- Filled by JavaScript -->
+                            </thead>
+                            <tbody id="matrixTable">
+                                <!-- Filled by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- DAILY PRIZES TAB -->
+        <div id="daily-prizes" class="tab-content">
+            <div class="card">
+                <h2>🏆 Dagprijzen Overzicht</h2>
+                <p style="margin-bottom: 20px; font-style: italic;">Exact zoals jullie gewend zijn - dagwinnaars in blauw gemarkeerd!</p>
+                <div class="table-container">
+                    <div class="table-scroll">
+                        <table>
+                            <thead>
+                                <tr id="dailyPrizesHeader">
+                                    <th>Rang</th>
+                                    <th>Deelnemer</th>
+                                    <th>Totaal</th>
+                                    <th>Dagoverwinningen</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dailyPrizesTable">
+                                <!-- Filled by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- EXCEL VIEW TAB -->
+        <div id="excel-view" class="tab-content">
+            <div class="card">
+                <h2>📊 Excel Weergave - Exact zoals EJM & PVE</h2>
+                <p>Deze weergave bootst de originele Excel sheets exact na met gele en blauwe truien!</p>
+                
+                <!-- Excel Tab Buttons -->
+                <div style="margin: 20px 0;">
+                    <button class="btn excel-tab-btn active" onclick="showExcelTab('hoofdprijs')">📊 Hoofdprijs</button>
+                    <button class="btn excel-tab-btn" onclick="showExcelTab('matrix')">🔗 Renners Matrix</button>
+                </div>
+                
+                <!-- Hoofdprijs Excel View -->
+                <div id="excel-hoofdprijs" class="excel-tab-content active">
+                    <div style="background: white; border: 1px solid #ccc; border-radius: 8px; overflow: hidden;">
+                        <!-- Milka Header Section -->
+                        <div style="background: linear-gradient(45deg, #FFD700, #FFA500); padding: 10px; border-bottom: 2px solid #333;">
+                            <div style="display: flex; align-items: center; gap: 15px;">
+                                <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiByeD0iOCIgZmlsbD0iIzY2M0Q5OSIvPgo8dGV4dCB4PSIzMCIgeT0iMzUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5NSUxLQTwvdGV4dD4KPC9zdmc+" alt="Milka" style="width: 60px; height: 60px;">
+                                <div>
+                                    <h3 style="margin: 0; color: #333; font-size: 1.4em;">Hoofdprijs</h3>
+                                    <p style="margin: 0; color: #666; font-size: 0.9em;">Tour de France 2024 - Live Scores</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Excel-like Grid -->
+                        <div id="hoofdprijsGrid" class="excel-grid">
+                            <!-- Will be filled by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Matrix Excel View -->
+                <div id="excel-matrix" class="excel-tab-content">
+                    <div style="background: white; border: 1px solid #ccc; border-radius: 8px; overflow: hidden;">
+                        <div style="padding: 15px; border-bottom: 1px solid #ddd;">
+                            <h3 style="margin: 0; color: #333;">Renners Selectie Matrix</h3>
+                            <p style="margin: 5px 0 0 0; color: #666; font-size: 0.9em;">Groene vakjes = renner geselecteerd</p>
+                        </div>
+                        
+                        <div id="matrixGrid" class="excel-grid">
+                            <!-- Will be filled by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ADMIN TAB -->
+        <div id="admin" class="tab-content">
+            <div class="card">
+                <h2>⚙️ Data Management</h2>
+                
+                <div class="file-upload" onclick="document.getElementById('excelFile').click()">
+                    <h3>📊 Upload Tour de France Excel</h3>
+                    <p>Upload het Excel bestand met alle data (tabs: Renners, Deelnemers, Etappe punten, Eindklassement punten, Etappe uitslagen)</p>
+                    <input type="file" id="excelFile" accept=".xlsx,.xls" onchange="handleExcelFile(event)">
+                    <button class="btn" onclick="event.stopPropagation(); downloadSampleExcelFile()" style="margin-top: 10px;">📥 Download Voorbeeld</button>
+                </div>
+
+                <div style="text-align: center; margin: 30px 0;">
+                    <button class="btn" onclick="exportData()">💾 Export Data</button>
+                    <button class="btn" onclick="resetData()">🔄 Reset Data</button>
+                </div>
+
+                <div style="margin-top: 30px; padding: 20px; background: #f5f5f5; border-radius: 10px;">
+                    <h3>📋 Instructies:</h3>
+                    <ol style="margin: 15px 0; padding-left: 20px; line-height: 1.6;">
+                        <li><strong>Download het voorbeeld Excel bestand</strong> om de juiste structuur te zien</li>
+                        <li><strong>Upload je Excel bestand</strong> met alle data in de juiste tabs</li>
+                        <li><strong>Update dagelijks</strong> de 'Etappe uitslagen' tab en upload opnieuw</li>
+                        <li><strong>Alle berekeningen</strong> gebeuren automatisch</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detail View Modal -->
+    <div id="detailView" class="detail-view">
+        <div class="detail-content">
+            <button class="close-btn" onclick="closeDetailView()">&times;</button>
+            <div id="detailContent">
+                <!-- Filled by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let participants = [];
+        let allRiders = [];
+        let currentStage = 1;
+
+        // Tab navigation
+        function showTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.nav-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+
+            // Load appropriate data
+            switch(tabName) {
+                case 'participants':
+                    loadParticipantsTable();
+                    break;
+                case 'riders':
+                    loadRidersTable();
+                    break;
+                case 'matrix':
+                    loadMatrixTable();
+                    break;
+                case 'daily-prizes':
+                    loadDailyPrizesTable();
+                    break;
+                case 'excel-view':
+                    loadHoofdprijsExcelView();
+                    loadMatrixExcelView();
+                    break;
+            }
+        }
+
+        // Sample Excel file download function
+        function downloadSampleExcelFile() {
+            // Maak een voorbeeld Excel bestand met de juiste structuur
+            const workbook = XLSX.utils.book_new();
+            
+            // Tab 1: Renners
+            const rennersData = [
+                ['Renners'],
+                ['Tadej Pogačar'],
+                ['Jonas Vingegaard'],
+                ['Remco Evenepoel'],
+                ['Primož Roglič'],
+                ['Geraint Thomas'],
+                ['Adam Yates'],
+                ['Richard Carapaz'],
+                ['Mark Cavendish'],
+                ['Jasper Philipsen'],
+                ['Wout van Aert'],
+                ['Mathieu van der Poel'],
+                ['Peter Sagan'],
+                ['Caleb Ewan'],
+                ['Sam Bennett'],
+                ['Fabio Jakobsen']
+            ];
+            const rennersSheet = XLSX.utils.aoa_to_sheet(rennersData);
+            XLSX.utils.book_append_sheet(workbook, rennersSheet, 'Renners');
+            
+            // Tab 2: Deelnemers
+            const deelnemersData = [
+                ['Adriaan Mutter', 'Jan de Vries', 'Peter Janssen'],
+                ['Tadej Pogačar', 'Jonas Vingegaard', 'Remco Evenepoel'],
+                ['Jonas Vingegaard', 'Tadej Pogačar', 'Wout van Aert'],
+                ['Remco Evenepoel', 'Primož Roglič', 'Mathieu van der Poel'],
+                ['Primož Roglič', 'Geraint Thomas', 'Jasper Philipsen'],
+                ['Geraint Thomas', 'Adam Yates', 'Mark Cavendish'],
+                ['Adam Yates', 'Richard Carapaz', 'Caleb Ewan'],
+                ['Richard Carapaz', 'Mark Cavendish', 'Sam Bennett'],
+                ['Mark Cavendish', 'Jasper Philipsen', 'Fabio Jakobsen'],
+                ['Jasper Philipsen', 'Wout van Aert', 'Peter Sagan'],
+                ['Wout van Aert', 'Mathieu van der Poel', 'Tadej Pogačar'],
+                ['Mathieu van der Poel', 'Peter Sagan', 'Jonas Vingegaard'],
+                ['Peter Sagan', 'Caleb Ewan', 'Primož Roglič']
+            ];
+            const deelnemersSheet = XLSX.utils.aoa_to_sheet(deelnemersData);
+            XLSX.utils.book_append_sheet(workbook, deelnemersSheet, 'Deelnemers');
+            
+            // Tab 3: Etappe punten (vast schema)
+            const etappePuntenData = [
+                ['Categorie', 'Positie', 'Punten'],
+                ['Etappe', 1, 30],
+                ['Etappe', 2, 15],
+                ['Etappe', 3, 12],
+                ['Etappe', 4, 9],
+                ['Etappe', 5, 8],
+                ['Etappe', 6, 7],
+                ['Etappe', 7, 6],
+                ['Etappe', 8, 5],
+                ['Etappe', 9, 4],
+                ['Etappe', 10, 3],
+                ['Trui', 'Geel', 10],
+                ['Trui', 'Groen', 5],
+                ['Trui', 'Bolletjes', 5],
+                ['Trui', 'Wit', 3]
+            ];
+            const etappePuntenSheet = XLSX.utils.aoa_to_sheet(etappePuntenData);
+            XLSX.utils.book_append_sheet(workbook, etappePuntenSheet, 'Etappe punten');
+            
+            // Tab 4: Eindklassement punten (vast schema)
+            const eindklassementPuntenData = [
+                ['Categorie', 'Positie', 'Punten'],
+                ['Eindklassement', 1, 150],
+                ['Eindklassement', 2, 75],
+                ['Eindklassement', 3, 50],
+                ['Eindklassement', 4, 40],
+                ['Eindklassement', 5, 35],
+                ['Eindklassement', 6, 30],
+                ['Eindklassement', 7, 28],
+                ['Eindklassement', 8, 26],
+                ['Eindklassement', 9, 24],
+                ['Eindklassement', 10, 22],
+                ['Eindklassement', 11, 20],
+                ['Eindklassement', 12, 18],
+                ['Eindklassement', 13, 17],
+                ['Eindklassement', 14, 16],
+                ['Eindklassement', 15, 15],
+                ['Eindklassement', 16, 14],
+                ['Eindklassement', 17, 13],
+                ['Eindklassement', 18, 12],
+                ['Eindklassement', 19, 11],
+                ['Eindklassement', 20, 10],
+                ['Trui Groen', 1, 40],
+                ['Trui Groen', 2, 20],
+                ['Trui Groen', 3, 10],
+                ['Trui Bolletjes', 1, 40],
+                ['Trui Bolletjes', 2, 20],
+                ['Trui Bolletjes', 3, 10],
+                ['Trui Wit', 1, 20],
+                ['Trui Wit', 2, 10],
+                ['Trui Wit', 3, 5]
+            ];
+            const eindklassementPuntenSheet = XLSX.utils.aoa_to_sheet(eindklassementPuntenData);
+            XLSX.utils.book_append_sheet(workbook, eindklassementPuntenSheet, 'Eindklassement punten');
+            
+            // Tab 5: Etappe uitslagen (voorbeeld eerste twee etappes)
+            const etappeUitslagenData = [
+                ['', 'Etappe-1', 'Etappe-2'],
+                [1, 'Mark Cavendish', 'Jasper Philipsen'],
+                [2, 'Jasper Philipsen', 'Mark Cavendish'],
+                [3, 'Caleb Ewan', 'Wout van Aert'],
+                [4, 'Sam Bennett', 'Mathieu van der Poel'],
+                [5, 'Fabio Jakobsen', 'Tadej Pogačar'],
+                [6, 'Wout van Aert', 'Jonas Vingegaard'],
+                [7, 'Mathieu van der Poel', 'Remco Evenepoel'],
+                [8, 'Peter Sagan', 'Primož Roglič'],
+                [9, 'Tadej Pogačar', 'Geraint Thomas'],
+                [10, 'Jonas Vingegaard', 'Adam Yates'],
+                ['geel', 'Tadej Pogačar', 'Tadej Pogačar'],
+                ['groen', 'Mark Cavendish', 'Mark Cavendish'],
+                ['wit', 'Remco Evenepoel', 'Remco Evenepoel'],
+                ['bolletjes', 'Richard Carapaz', 'Richard Carapaz']
+            ];
+            const etappeUitslagenSheet = XLSX.utils.aoa_to_sheet(etappeUitslagenData);
+            XLSX.utils.book_append_sheet(workbook, etappeUitslagenSheet, 'Etappe uitslagen');
+            
+            // Download het bestand
+            XLSX.writeFile(workbook, 'TourDeFrance_Voorbeeld.xlsx');
+            
+            alert('📊 Voorbeeld Excel bestand gedownload! Dit bevat alle juiste tabs en structuur.');
+        }
+
+        // File handling functions
+        function handleExcelFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            console.log('📊 Excel file uploaded:', file.name);
+            
+            // Reset file input zodat hetzelfde bestand opnieuw kan worden geselecteerd
+            event.target.value = '';
+            
+            // Toon loading feedback
+            const loadingMsg = document.createElement('div');
+            loadingMsg.id = 'loadingMsg';
+            loadingMsg.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.8); color: white; padding: 20px; border-radius: 10px; z-index: 9999; font-size: 1.2em;';
+            loadingMsg.innerHTML = '📊 Excel bestand wordt verwerkt...<br><div style="margin-top: 10px; font-size: 0.9em;">Even geduld alstublieft</div>';
+            document.body.appendChild(loadingMsg);
+            
+            if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, {type: 'array'});
+                        
+                        console.log('📋 Excel tabs gevonden:', workbook.SheetNames);
+                        
+                        // Verwachte tabs: Renners, Deelnemers, Etappe punten, Eindklassement punten, Etappe uitslagen
+                        if (!workbook.SheetNames.includes('Renners')) {
+                            const loadingMsg = document.getElementById('loadingMsg');
+                            if (loadingMsg) loadingMsg.remove();
+                            alert('❌ Tab "Renners" niet gevonden in Excel bestand');
+                            return;
+                        }
+                        if (!workbook.SheetNames.includes('Deelnemers')) {
+                            const loadingMsg = document.getElementById('loadingMsg');
+                            if (loadingMsg) loadingMsg.remove();
+                            alert('❌ Tab "Deelnemers" niet gevonden in Excel bestand');
+                            return;
+                        }
+                        if (!workbook.SheetNames.includes('Etappe uitslagen')) {
+                            const loadingMsg = document.getElementById('loadingMsg');
+                            if (loadingMsg) loadingMsg.remove();
+                            alert('❌ Tab "Etappe uitslagen" niet gevonden in Excel bestand');
+                            return;
+                        }
+                        
+                        // Parse alle relevante tabs
+                        parseExcelData(workbook);
+                        
+                    } catch (error) {
+                        // Verwijder loading message
+                        const loadingMsg = document.getElementById('loadingMsg');
+                        if (loadingMsg) loadingMsg.remove();
+                        
+                        alert('❌ Fout bij het lezen van Excel bestand: ' + error.message);
+                        console.error('Excel parse error:', error);
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+            } else {
+                // Verwijder loading message
+                const loadingMsg = document.getElementById('loadingMsg');
+                if (loadingMsg) loadingMsg.remove();
+                
+                alert('❌ Selecteer een geldig Excel bestand (.xlsx of .xls)');
+            }
+        }
+
+        function parseExcelData(workbook) {
+            try {
+                // Parse Renners tab
+                const rennersSheet = workbook.Sheets['Renners'];
+                const rennersData = XLSX.utils.sheet_to_json(rennersSheet, {header: 1});
+                console.log('🚴 Renners data:', rennersData);
+                
+                // Parse Deelnemers tab
+                const deelnemersSheet = workbook.Sheets['Deelnemers'];
+                const deelnemersData = XLSX.utils.sheet_to_json(deelnemersSheet, {header: 1});
+                console.log('👥 Deelnemers data:', deelnemersData);
+                
+                // Parse Etappe uitslagen tab
+                const uitlagenSheet = workbook.Sheets['Etappe uitslagen'];
+                const uitlagenData = XLSX.utils.sheet_to_json(uitlagenSheet, {header: 1});
+                console.log('🏆 Etappe uitslagen data:', uitlagenData);
+                
+                // Parse optionele punten tabs
+                let etappePunten = null;
+                let eindklassementPunten = null;
+                
+                if (workbook.SheetNames.includes('Etappe punten')) {
+                    const etappePuntenSheet = workbook.Sheets['Etappe punten'];
+                    etappePunten = XLSX.utils.sheet_to_json(etappePuntenSheet, {header: 1});
+                    console.log('📊 Etappe punten:', etappePunten);
+                }
+                
+                if (workbook.SheetNames.includes('Eindklassement punten')) {
+                    const eindklassementPuntenSheet = workbook.Sheets['Eindklassement punten'];
+                    eindklassementPunten = XLSX.utils.sheet_to_json(eindklassementPuntenSheet, {header: 1});
+                    console.log('🏅 Eindklassement punten:', eindklassementPunten);
+                }
+                
+                // Verwerk de data
+                processExcelData(rennersData, deelnemersData, uitlagenData, etappePunten, eindklassementPunten);
+                
+            } catch (error) {
+                // Verwijder loading message
+                const loadingMsg = document.getElementById('loadingMsg');
+                if (loadingMsg) loadingMsg.remove();
+                
+                alert('❌ Fout bij het verwerken van Excel data: ' + error.message);
+                console.error('Excel processing error:', error);
+            }
+        }
+
+        function processExcelData(rennersData, deelnemersData, uitlagenData, etappePunten, eindklassementPunten) {
+            // Reset huidige data
+            participants = [];
+            allRiders = [];
+            currentStage = 1;
+            
+            // Verwerk renners lijst
+            const availableRiders = [];
+            if (rennersData && rennersData.length > 1) {
+                for (let i = 1; i < rennersData.length; i++) { // Skip header row
+                    if (rennersData[i][0]) { // Als er een naam is in kolom A
+                        availableRiders.push(rennersData[i][0]);
+                    }
+                }
+            }
+            console.log('✅ Beschikbare renners:', availableRiders);
+            
+            // Verwerk deelnemers en hun ploegen
+            if (deelnemersData && deelnemersData.length > 0) {
+                const headerRow = deelnemersData[0];
+                
+                // Loop door alle kolommen (deelnemers)
+                for (let col = 0; col < headerRow.length; col++) {
+                    const deelnemerNaam = headerRow[col];
+                    if (deelnemerNaam && deelnemerNaam.trim() !== '') {
+                        
+                        // Verzamel de 12 renners voor deze deelnemer (rij 1-12)
+                        const team = [];
+                        for (let row = 1; row <= 12; row++) {
+                            if (deelnemersData[row] && deelnemersData[row][col]) {
+                                const rennerNaam = deelnemersData[row][col];
+                                team.push({
+                                    name: rennerNaam,
+                                    points: Array(21).fill(0), // 21 stages max
+                                    status: "active"
+                                });
+                            }
+                        }
+                        
+                        if (team.length > 0) {
+                            participants.push({
+                                name: deelnemerNaam,
+                                totalPoints: 0,
+                                dailyWins: 0,
+                                stagePoints: Array(21).fill(0),
+                                team: team
+                            });
+                        }
+                    }
+                }
+            }
+            
+            console.log('✅ Deelnemers verwerkt:', participants.length);
+            
+            // Verwerk etappe uitslagen
+            if (uitlagenData && uitlagenData.length > 1) {
+                processEtappeUitslagen(uitlagenData, etappePunten);
+            }
+            
+            // Update alle tabellen
+            createAllRidersArray();
+            recalculateAllData();
+            loadParticipantsTable();
+            loadRidersTable();
+            loadMatrixTable();
+            loadDailyPrizesTable();
+            updatePodiums();
+            updateTableHeaders();
+            
+            // Verwijder loading message
+            const loadingMsg = document.getElementById('loadingMsg');
+            if (loadingMsg) loadingMsg.remove();
+            
+            alert(`✅ Excel bestand succesvol geladen!\n${participants.length} deelnemers\n${availableRiders.length} renners\nEtappe uitslagen verwerkt`);
+        }
+
+        function processEtappeUitslagen(uitlagenData, etappePunten) {
+            // Bepaal aantal etappes gebaseerd op kolommen in uitslagen
+            const headerRow = uitlagenData[0];
+            const etappeColumns = [];
+            
+            for (let col = 1; col < headerRow.length; col++) { // Skip eerste kolom (positie)
+                if (headerRow[col] && headerRow[col].toString().startsWith('Etappe-')) {
+                    etappeColumns.push({
+                        col: col,
+                        name: headerRow[col],
+                        stage: parseInt(headerRow[col].split('-')[1])
+                    });
+                }
+            }
+            
+            currentStage = Math.max(...etappeColumns.map(e => e.stage), 1);
+            console.log('🏁 Aantal etappes gevonden:', currentStage);
+            
+            // Punten schema (default als geen aparte tab)
+            const puntenSchema = {
+                1: 30, 2: 15, 3: 12, 4: 9, 5: 8,
+                6: 7, 7: 6, 8: 5, 9: 4, 10: 3,
+                'geel': 10, 'groen': 5, 'bolletjes': 5, 'wit': 3
+            };
+            
+            // Verwerk elke etappe
+            etappeColumns.forEach(etappeInfo => {
+                const stageIndex = etappeInfo.stage - 1;
+                
+                // Reset punten voor deze etappe
+                participants.forEach(participant => {
+                    participant.team.forEach(rider => {
+                        rider.points[stageIndex] = 0;
+                    });
+                });
+                
+                // Verwerk top 10 uitslagen
+                for (let row = 1; row <= 10; row++) {
+                    if (uitlagenData[row] && uitlagenData[row][etappeInfo.col]) {
+                        const rennerNaam = uitlagenData[row][etappeInfo.col];
+                        const punten = puntenSchema[row] || 0;
+                        
+                        // Geef punten aan alle deelnemers die deze renner hebben
+                        participants.forEach(participant => {
+                            const rider = participant.team.find(r => r.name === rennerNaam);
+                            if (rider) {
+                                rider.points[stageIndex] += punten;
+                            }
+                        });
+                    }
+                }
+                
+                // Verwerk truien (geel, groen, bolletjes, wit)
+                const truienPosities = ['geel', 'groen', 'bolletjes', 'wit'];
+                truienPosities.forEach(trui => {
+                    // Zoek de rij voor deze trui
+                    for (let row = 11; row < uitlagenData.length; row++) {
+                        if (uitlagenData[row] && uitlagenData[row][0] && 
+                            uitlagenData[row][0].toString().toLowerCase() === trui) {
+                            
+                            const rennerNaam = uitlagenData[row][etappeInfo.col];
+                            if (rennerNaam) {
+                                const punten = puntenSchema[trui] || 0;
+                                
+                                // Geef punten aan alle deelnemers die deze renner hebben
+                                participants.forEach(participant => {
+                                    const rider = participant.team.find(r => r.name === rennerNaam);
+                                    if (rider) {
+                                        rider.points[stageIndex] += punten;
+                                    }
+                                });
+                            }
+                            break;
+                        }
+                    }
+                });
+            });
+        }
+
+        // Data processing functions
+        function processTeamData(teamData) {
+            participants = [];
+            
+            if (teamData.Deelnemers && Array.isArray(teamData.Deelnemers)) {
+                teamData.Deelnemers.forEach(deelnemer => {
+                    const team = [];
+                    
+                    for (let i = 1; i <= 12; i++) {
+                        const riderName = deelnemer[`Renner_${i}`];
+                        const teamName = deelnemer[`Team_${i}`];
+                        
+                        if (riderName && teamName) {
+                            team.push({
+                                name: riderName,
+                                team: teamName,
+                                points: Array(21).fill(0), // 21 stages max
+                                status: "active"
+                            });
+                        }
+                    }
+                    
+                    participants.push({
+                        name: deelnemer.Naam,
+                        totalPoints: 0,
+                        dailyWins: 0,
+                        stagePoints: Array(21).fill(0),
+                        team: team
+                    });
+                });
+                
+                createAllRidersArray();
+                loadParticipantsTable();
+                updatePodiums();
+                
+                console.log(`✅ Processed ${participants.length} participants`);
+            }
+        }
+
+        function processStageData(stageData) {
+            if (stageData.stage > currentStage) {
+                currentStage = stageData.stage;
+            }
+            
+            updateStageInfo(stageData);
+            updateStoryContent(stageData);
+            
+            if (stageData.top10 && participants.length > 0) {
+                updateRiderPointsFromStageResults(stageData);
+            }
+            
+            if (stageData.jerseys) {
+                updateJerseyPoints(stageData.jerseys, stageData.stage - 1);
+            }
+            
+            if (stageData.dropouts && stageData.dropouts.length > 0) {
+                processDropouts(stageData.dropouts);
+            }
+            
+            recalculateAllData();
+            loadParticipantsTable();
+            updatePodiums();
+            updateTableHeaders();
+        }
+
+        function updateStageInfo(stageData) {
+            if (stageData.stageInfo) {
+                document.getElementById('currentStageTitle').textContent = `🗓️ Vandaag - Etappe ${stageData.stage}`;
+                document.getElementById('currentStageName').innerHTML = `<strong>${stageData.stageInfo.name}</strong>`;
+                document.getElementById('currentStageDetails').textContent = `${stageData.stageInfo.distance} | ${stageData.stageInfo.type}`;
+                document.getElementById('currentStageDescription').textContent = stageData.stageInfo.description || '';
+                document.getElementById('stageInfoContainer').style.display = 'grid';
+            }
+            
+            if (stageData.nextStage) {
+                document.getElementById('nextStageTitle').textContent = `🗓️ Morgen - Etappe ${stageData.nextStage.stage}`;
+                document.getElementById('nextStageName').innerHTML = `<strong>${stageData.nextStage.name}</strong>`;
+                document.getElementById('nextStageDetails').textContent = `${stageData.nextStage.distance} | ${stageData.nextStage.type}`;
+                document.getElementById('nextStageDescription').textContent = stageData.nextStage.description || '';
+            }
+            
+            document.getElementById('dailyPodiumTitle').textContent = `🔵 Dagpodium - Etappe ${stageData.stage}`;
+        }
+
+        function updateStoryContent(stageData) {
+            if (stageData.todayStory) {
+                document.getElementById('todayStory').innerHTML = stageData.todayStory;
+                document.getElementById('todayStorySection').style.display = 'block';
+            }
+            
+            if (stageData.tomorrowStory) {
+                document.getElementById('tomorrowStory').innerHTML = stageData.tomorrowStory;
+                document.getElementById('tomorrowStorySection').style.display = 'block';
+            }
+        }
+
+        function updateRiderPointsFromStageResults(stageData) {
+            const stageIndex = stageData.stage - 1;
+            
+            participants.forEach(participant => {
+                participant.team.forEach(rider => {
+                    if (rider.points[stageIndex] !== undefined) {
+                        rider.points[stageIndex] = 0;
+                    }
+                });
+            });
+            
+            stageData.top10.forEach(result => {
+                participants.forEach(participant => {
+                    const rider = participant.team.find(r => r.name === result.rider);
+                    if (rider) {
+                        rider.points[stageIndex] = result.points;
+                    }
+                });
+            });
+        }
+
+        function updateJerseyPoints(jerseys, stageIndex) {
+            Object.entries(jerseys).forEach(([jersey, data]) => {
+                const points = jersey === 'yellow' ? 10 : (jersey === 'green' || jersey === 'polka' ? 5 : 3);
+                
+                participants.forEach(participant => {
+                    const rider = participant.team.find(r => r.name === data.rider);
+                    if (rider && rider.points[stageIndex] !== undefined) {
+                        rider.points[stageIndex] += points;
+                    }
+                });
+            });
+        }
+
+        function processDropouts(dropouts) {
+            dropouts.forEach(riderName => {
+                participants.forEach(participant => {
+                    const rider = participant.team.find(r => r.name === riderName);
+                    if (rider) {
+                        rider.status = 'dropped';
+                    }
+                });
+            });
+        }
+
+        function recalculateAllData() {
+            participants.forEach(participant => {
+                for (let stageIndex = 0; stageIndex < currentStage; stageIndex++) {
+                    let stageTotal = 0;
+                    participant.team.forEach(rider => {
+                        stageTotal += rider.points[stageIndex] || 0;
+                    });
+                    participant.stagePoints[stageIndex] = stageTotal;
+                }
+                
+                participant.totalPoints = participant.stagePoints.slice(0, currentStage).reduce((sum, p) => sum + p, 0);
+            });
+            
+            calculateAllDailyWins();
+            createAllRidersArray();
+            participants.sort((a, b) => b.totalPoints - a.totalPoints);
+        }
+
+        function calculateAllDailyWins() {
+            participants.forEach(p => p.dailyWins = 0);
+            
+            for (let stage = 0; stage < currentStage; stage++) {
+                let maxPoints = 0;
+                let winner = null;
+                
+                participants.forEach(participant => {
+                    const stagePoints = participant.stagePoints[stage] || 0;
+                    if (stagePoints > maxPoints) {
+                        maxPoints = stagePoints;
+                        winner = participant;
+                    }
+                });
+                
+                if (winner && maxPoints > 0) {
+                    winner.dailyWins++;
+                }
+            }
+        }
+
+        function createAllRidersArray() {
+            const riderStats = {};
+            
+            participants.forEach(participant => {
+                participant.team.forEach(rider => {
+                    if (!riderStats[rider.name]) {
+                        riderStats[rider.name] = {
+                            name: rider.name,
+                            team: rider.team,
+                            points: Array(currentStage).fill(0),
+                            status: rider.status,
+                            totalPoints: 0
+                        };
+                    }
+                    
+                    rider.points.slice(0, currentStage).forEach((points, stageIndex) => {
+                        riderStats[rider.name].points[stageIndex] += points;
+                    });
+                    
+                    if (rider.status === 'dropped') {
+                        riderStats[rider.name].status = 'dropped';
+                    }
+                });
+            });
+            
+            allRiders = Object.values(riderStats).map(rider => {
+                rider.totalPoints = rider.points.reduce((sum, p) => sum + p, 0);
+                return rider;
+            });
+            
+            allRiders.sort((a, b) => b.totalPoints - a.totalPoints);
+        }
+
+        function updateTableHeaders() {
+            // Update riders table header
+            let ridersHeaderHtml = '<th>Pos</th><th>Renner</th><th>Totaal</th>';
+            for (let i = 1; i <= currentStage; i++) {
+                ridersHeaderHtml += `<th>Et ${i}</th>`;
+            }
+            ridersHeaderHtml += '<th>Status</th>';
+            document.getElementById('ridersTableHeader').innerHTML = ridersHeaderHtml;
+            
+            // Update daily prizes header
+            let dailyPrizesHeaderHtml = '<th>Rang</th><th>Deelnemer</th><th>Totaal</th>';
+            for (let i = 1; i <= currentStage; i++) {
+                dailyPrizesHeaderHtml += `<th>Etappe ${i}</th>`;
+            }
+            dailyPrizesHeaderHtml += '<th class="dagoverwinningen-column">Dagoverwinningen</th>';
+            document.getElementById('dailyPrizesHeader').innerHTML = dailyPrizesHeaderHtml;
+        }
+
+        // Table loading functions
+        function loadParticipantsTable() {
+            const tbody = document.getElementById('participantsTable');
+            
+            if (participants.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: #666;">📁 Upload een ploegen bestand om te beginnen</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = '';
+            participants.sort((a, b) => b.totalPoints - a.totalPoints);
+            
+            participants.forEach((participant, index) => {
+                const row = document.createElement('tr');
+                const lastStagePoints = participant.stagePoints[currentStage - 1] || 0;
+                
+                row.innerHTML = `
+                    <td><strong>${index + 1}</strong></td>
+                    <td><span class="clickable" onclick="showParticipantDetail('${participant.name}')">${participant.name}</span></td>
+                    <td class="points-cell">${participant.totalPoints}</td>
+                    <td class="points-cell">${participant.dailyWins} 🔵</td>
+                    <td class="points-cell">${lastStagePoints}</td>
+                    <td><button class="btn" style="padding: 5px 10px; font-size: 0.8em;" onclick="showParticipantDetail('${participant.name}')">Bekijk Ploeg</button></td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function loadRidersTable() {
+            const tbody = document.getElementById('ridersTable');
+            
+            if (allRiders.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; padding: 40px; color: #666;">📁 Upload eerst een ploegen bestand</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = '';
+            
+            allRiders.forEach((rider, index) => {
+                const row = document.createElement('tr');
+                const statusClass = rider.status === 'dropped' ? 'rider-dropped' : '';
+                
+                let stagePointsHtml = '';
+                for (let i = 0; i < currentStage; i++) {
+                    stagePointsHtml += `<td class="points-cell ${statusClass}">${rider.points[i] || 0}</td>`;
+                }
+                
+                row.innerHTML = `
+                    <td><strong>${index + 1}</strong></td>
+                    <td class="${statusClass}">${rider.name}</td>
+                    <td class="points-cell ${statusClass}"><strong>${rider.totalPoints}</strong></td>
+                    ${stagePointsHtml}
+                    <td class="${statusClass}">${rider.status === 'dropped' ? '❌ Uitgevallen' : '✅ Actief'}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function loadMatrixTable() {
+            const thead = document.getElementById('matrixHeader');
+            const tbody = document.getElementById('matrixTable');
+            
+            if (participants.length === 0) {
+                thead.innerHTML = '<tr><th colspan="4">Geen data</th></tr>';
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 40px; color: #666;">📁 Upload eerst een ploegen bestand</td></tr>';
+                return;
+            }
+            
+            const riderStats = {};
+            
+            participants.forEach(participant => {
+                participant.team.forEach(rider => {
+                    if (!riderStats[rider.name]) {
+                        riderStats[rider.name] = {
+                            name: rider.name,
+                            status: rider.status,
+                            selectedBy: [],
+                            totalSelections: 0
+                        };
+                    }
+                    riderStats[rider.name].selectedBy.push(participant.name);
+                    riderStats[rider.name].totalSelections++;
+                });
+            });
+
+            const riders = Object.values(riderStats).sort((a, b) => b.totalSelections - a.totalSelections);
+            
+            let headerHtml = '<tr><th style="writing-mode: initial; text-orientation: initial;">Renner</th><th style="writing-mode: initial; text-orientation: initial;">Status</th><th style="writing-mode: initial; text-orientation: initial;">Totaal</th>';
+            participants.forEach(participant => {
+                headerHtml += `<th style="writing-mode: vertical-lr; text-orientation: mixed;" title="${participant.name}">${participant.name}</th>`;
+            });
+            headerHtml += '</tr>';
+            thead.innerHTML = headerHtml;
+            
+            tbody.innerHTML = '';
+            
+            riders.forEach(rider => {
+                const row = document.createElement('tr');
+                const statusClass = rider.status === 'dropped' ? 'rider-dropped' : '';
+                
+                let participantCells = '';
+                participants.forEach(participant => {
+                    const isSelected = rider.selectedBy.includes(participant.name);
+                    const cellContent = isSelected ? '<span class="rider-selected">●</span>' : '';
+                    participantCells += `<td>${cellContent}</td>`;
+                });
+                
+                row.innerHTML = `
+                    <td class="${statusClass}">${rider.name}</td>
+                    <td class="${statusClass}">${rider.status === 'dropped' ? '❌' : '✅'}</td>
+                    <td class="points-cell"><strong>${rider.totalSelections}</strong></td>
+                    ${participantCells}
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function loadDailyPrizesTable() {
+            const tbody = document.getElementById('dailyPrizesTable');
+            
+            if (participants.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 40px; color: #666;">📁 Upload eerst een ploegen bestand</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = '';
+            participants.sort((a, b) => b.totalPoints - a.totalPoints);
+            
+            const dailyWinners = [];
+            const generalLeaders = [];
+            
+            for (let stage = 0; stage < currentStage; stage++) {
+                // Calculate daily winner
+                let maxPoints = 0;
+                let winner = null;
+                
+                participants.forEach(participant => {
+                    const stagePoints = participant.stagePoints[stage] || 0;
+                    if (stagePoints > maxPoints) {
+                        maxPoints = stagePoints;
+                        winner = participant.name;
+                    }
+                });
+                
+                dailyWinners[stage] = winner;
+                
+                // Calculate general classification leader up to this stage
+                let leaderPoints = 0;
+                let leader = null;
+                
+                participants.forEach(participant => {
+                    const totalUpToStage = participant.stagePoints.slice(0, stage + 1).reduce((sum, p) => sum + p, 0);
+                    if (totalUpToStage > leaderPoints) {
+                        leaderPoints = totalUpToStage;
+                        leader = participant.name;
+                    }
+                });
+                
+                generalLeaders[stage] = leader;
+            }
+            
+            participants.forEach((participant, index) => {
+                const row = document.createElement('tr');
+                
+                let stagePointsHtml = '';
+                for (let i = 0; i < currentStage; i++) {
+                    const points = participant.stagePoints[i] || 0;
+                    const isWinner = dailyWinners[i] === participant.name && points > 0;
+                    const isLeader = generalLeaders[i] === participant.name && points > 0;
+                    
+                    let displayText = points.toString();
+                    if (isWinner && isLeader) {
+                        displayText += ' 🔵🟡';
+                    } else if (isWinner) {
+                        displayText += ' 🔵';
+                    } else if (isLeader) {
+                        displayText += ' 🟡';
+                    }
+                    
+                    stagePointsHtml += `<td class="points-cell">${displayText}</td>`;
+                }
+                
+                row.innerHTML = `
+                    <td><strong>${index + 1}</strong></td>
+                    <td>${participant.name}</td>
+                    <td class="points-cell"><strong>${participant.totalPoints}</strong></td>
+                    ${stagePointsHtml}
+                    <td class="points-cell dagoverwinningen-column">${participant.dailyWins}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Podium functions
+        function updatePodiums() {
+            const gettingStarted = document.getElementById('gettingStarted');
+            
+            if (participants.length === 0) {
+                if (gettingStarted) gettingStarted.style.display = 'block';
+                
+                const podiums = document.querySelectorAll('.podium .podium-places');
+                podiums.forEach(podium => {
+                    podium.innerHTML = '<div style="padding: 40px; color: #666; text-align: center;">📁 Upload data om podiums te zien</div>';
+                });
+                return;
+            }
+            
+            if (gettingStarted) gettingStarted.style.display = 'none';
+            
+            const lastStageIndex = currentStage - 1;
+            const dailyRanking = [...participants].sort((a, b) => 
+                (b.stagePoints[lastStageIndex] || 0) - (a.stagePoints[lastStageIndex] || 0)
+            );
+
+            const generalRanking = [...participants].sort((a, b) => b.totalPoints - a.totalPoints);
+            const dailyWinsRanking = [...participants].sort((a, b) => b.dailyWins - a.dailyWins);
+
+            updatePodiumContent('daily', dailyRanking, lastStageIndex);
+            updatePodiumContent('general', generalRanking, 'total');
+            updatePodiumContent('dailywins', dailyWinsRanking, 'wins');
+        }
+
+        function updatePodiumContent(type, ranking, scoreType) {
+            let podiumHtml = '';
+            
+            // Group participants by their scores to handle ties
+            const scoreGroups = [];
+            let currentScore = null;
+            let currentGroup = [];
+            
+            ranking.forEach(participant => {
+                let score;
+                if (scoreType === 'total') {
+                    score = participant.totalPoints;
+                } else if (scoreType === 'wins') {
+                    score = participant.dailyWins;
+                } else {
+                    score = participant.stagePoints[scoreType] || 0;
+                }
+                
+                if (score !== currentScore) {
+                    if (currentGroup.length > 0) {
+                        scoreGroups.push({score: currentScore, participants: currentGroup});
+                    }
+                    currentScore = score;
+                    currentGroup = [participant];
+                } else {
+                    currentGroup.push(participant);
+                }
+            });
+            
+            if (currentGroup.length > 0) {
+                scoreGroups.push({score: currentScore, participants: currentGroup});
+            }
+            
+            // Display top 3 positions (accounting for ties)
+            let position = 1;
+            let podiumCount = 0;
+            
+            for (let groupIndex = 0; groupIndex < scoreGroups.length && podiumCount < 3; groupIndex++) {
+                const group = scoreGroups[groupIndex];
+                
+                for (let participantIndex = 0; participantIndex < group.participants.length && podiumCount < 3; participantIndex++) {
+                    const participant = group.participants[participantIndex];
+                    let points, subtitle;
+                    
+                    if (scoreType === 'total') {
+                        points = `${participant.totalPoints} punten`;
+                        subtitle = position === 1 ? '🥇 Gele Trui!' : (position === 2 ? '🥈 Tweede plaats' : '🥉 Derde plaats');
+                    } else if (scoreType === 'wins') {
+                        points = `${participant.dailyWins} dagoverwinning${participant.dailyWins !== 1 ? 'en' : ''}`;
+                        subtitle = position === 1 ? '🥇 Dagkoning!' : (position === 2 ? '🥈 Tweede plaats' : '🥉 Derde plaats');
+                    } else {
+                        points = `${participant.stagePoints[scoreType] || 0} punten`;
+                        subtitle = position === 1 ? '🥇 Dagwinnaar!' : (position === 2 ? '🥈 Tweede plaats' : '🥉 Derde plaats');
+                    }
+
+                    // If there are ties, show shared position
+                    let displayPosition = position;
+                    if (group.participants.length > 1) {
+                        subtitle = `${subtitle} (gedeeld)`;
+                    }
+
+                    const positionClass = position === 1 ? 'first' : (position === 2 ? 'second' : 'third');
+                    
+                    podiumHtml += `
+                        <div class="podium-place ${positionClass}">
+                            <div class="podium-number">${displayPosition}</div>
+                            <div class="podium-name">${participant.name}</div>
+                            <div class="podium-points">${points}</div>
+                            <div style="font-size: 0.8em; margin-top: 5px;">${subtitle}</div>
+                        </div>
+                    `;
+                    
+                    podiumCount++;
+                }
+                
+                // Update position based on how many participants were in this score group
+                position += group.participants.length;
+            }
+            
+            const podiums = document.querySelectorAll('.podium .podium-places');
+            let podiumIndex;
+            if (type === 'daily') podiumIndex = 0;
+            else if (type === 'general') podiumIndex = 1;
+            else if (type === 'dailywins') podiumIndex = 2;
+            
+            if (podiums[podiumIndex]) {
+                podiums[podiumIndex].innerHTML = podiumHtml;
+            }
+        }
+
+        // Detail view functions
+        function showParticipantDetail(participantName) {
+            const participant = participants.find(p => p.name === participantName);
+            if (!participant) return;
+            
+            let teamHtml = `
+                <h2>🚴‍♂️ Ploeg van ${participantName}</h2>
+                <p><strong>Totaal: ${participant.totalPoints} punten | Dagoverwinningen: ${participant.dailyWins}</strong></p>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Renner</th>
+                                <th>Team</th>
+                                <th>Totaal</th>`;
+            
+            for (let i = 1; i <= currentStage; i++) {
+                teamHtml += `<th>Et ${i}</th>`;
+            }
+            
+            teamHtml += `<th>Status</th></tr></thead><tbody>`;
+            
+            participant.team.forEach(rider => {
+                const statusClass = rider.status === 'dropped' ? 'rider-dropped' : '';
+                const totalPoints = rider.points.slice(0, currentStage).reduce((sum, points) => sum + points, 0);
+                
+                let stagePointsHtml = '';
+                for (let i = 0; i < currentStage; i++) {
+                    stagePointsHtml += `<td class="points-cell ${statusClass}">${rider.points[i] || 0}</td>`;
+                }
+                
+                teamHtml += `
+                    <tr>
+                        <td class="${statusClass}">${rider.name}</td>
+                        <td class="${statusClass}">${rider.team}</td>
+                        <td class="points-cell ${statusClass}"><strong>${totalPoints}</strong></td>
+                        ${stagePointsHtml}
+                        <td class="${statusClass}">${rider.status === 'dropped' ? '❌ Uitgevallen' : '✅ Actief'}</td>
+                    </tr>
+                `;
+            });
+            
+            teamHtml += '</tbody></table></div>';
+            
+            document.getElementById('detailContent').innerHTML = teamHtml;
+            document.getElementById('detailView').style.display = 'flex';
+        }
+
+        function closeDetailView() {
+            document.getElementById('detailView').style.display = 'none';
+        }
+
+        // Utility functions
+        function exportData() {
+            const data = {
+                participants: participants,
+                allRiders: allRiders,
+                currentStage: currentStage,
+                exportDate: new Date().toISOString()
+            };
+            
+            const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `tourploeg-export-stage-${currentStage}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function resetData() {
+            if (confirm('Weet je zeker dat je alle data wilt resetten?')) {
+                participants = [];
+                allRiders = [];
+                currentStage = 1;
+                
+                const gettingStarted = document.getElementById('gettingStarted');
+                if (gettingStarted) gettingStarted.style.display = 'block';
+                
+                document.getElementById('stageInfoContainer').style.display = 'none';
+                document.getElementById('todayStorySection').style.display = 'none';
+                document.getElementById('tomorrowStorySection').style.display = 'none';
+                
+                loadParticipantsTable();
+                updatePodiums();
+                
+                alert('✅ Alle data gereset!');
+            }
+        }
+
+        // Excel View Functions
+        function showExcelTab(tabName) {
+            // Remove active class from all tab buttons
+            document.querySelectorAll('.excel-tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Remove active class from all tab contents
+            document.querySelectorAll('.excel-tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // Add active class to clicked button and corresponding content
+            event.target.classList.add('active');
+            document.getElementById(`excel-${tabName}`).classList.add('active');
+            
+            // Load appropriate Excel view
+            if (tabName === 'hoofdprijs') {
+                loadHoofdprijsExcelView();
+            } else if (tabName === 'matrix') {
+                loadMatrixExcelView();
+            }
+        }
+
+        function loadHoofdprijsExcelView() {
+            const container = document.getElementById('hoofdprijsGrid');
+            
+            if (participants.length === 0) {
+                container.innerHTML = '<div style="padding: 40px; text-align: center; color: #666;">Upload eerst Excel data om de hoofdprijs weergave te zien</div>';
+                return;
+            }
+            
+            // Sort participants by total points for ranking
+            const sortedParticipants = [...participants].sort((a, b) => b.totalPoints - a.totalPoints);
+            
+            // Calculate daily winners and general classification leaders for each stage
+            const dailyWinners = [];
+            const generalLeaders = [];
+            
+            for (let stage = 0; stage < currentStage; stage++) {
+                // Daily winners (can be multiple with same score)
+                let maxStagePoints = Math.max(...participants.map(p => p.stagePoints[stage] || 0));
+                dailyWinners[stage] = participants.filter(p => (p.stagePoints[stage] || 0) === maxStagePoints && maxStagePoints > 0);
+                
+                // General classification leaders up to this stage (can be multiple with same total)
+                let maxTotalPoints = 0;
+                participants.forEach(p => {
+                    const totalUpToStage = p.stagePoints.slice(0, stage + 1).reduce((sum, pts) => sum + pts, 0);
+                    if (totalUpToStage > maxTotalPoints) {
+                        maxTotalPoints = totalUpToStage;
+                    }
+                });
+                
+                generalLeaders[stage] = participants.filter(p => {
+                    const totalUpToStage = p.stagePoints.slice(0, stage + 1).reduce((sum, pts) => sum + pts, 0);
+                    return totalUpToStage === maxTotalPoints && maxTotalPoints > 0;
+                });
+            }
+            
+            // Create Excel-like table structure
+            let html = '<table style="border-collapse: collapse; width: 100%; font-size: 9px;">';
+            
+            // Header row 1: Stage numbers
+            html += '<tr>';
+            html += '<td class="excel-cell excel-header-cell" rowspan="2" style="min-width: 30px;">Rang</td>';
+            html += '<td class="excel-cell excel-header-cell" rowspan="2" style="min-width: 120px;">Deelnemer</td>';
+            
+            // Stage headers (3 columns per stage)
+            for (let stage = 1; stage <= currentStage; stage++) {
+                html += `<td class="excel-cell excel-header-cell" colspan="3" style="font-size: 8px;">Etappe ${stage}</td>`;
+            }
+            
+            // Total columns
+            html += '<td class="excel-cell excel-header-cell" rowspan="2" style="min-width: 40px;">Totaal</td>';
+            html += '<td class="excel-cell excel-header-cell" rowspan="2" style="min-width: 40px;">Rang</td>';
+            html += '<td class="excel-cell excel-header-cell" rowspan="2" style="min-width: 30px;">🔵</td>';
+            html += '<td class="excel-cell excel-header-cell" rowspan="2" style="min-width: 30px;">🟡</td>';
+            html += '</tr>';
+            
+            // Header row 2: Column types (Punten, Blauw, Geel)
+            html += '<tr>';
+            for (let stage = 1; stage <= currentStage; stage++) {
+                html += '<td class="excel-cell excel-header-cell" style="font-size: 7px;">Pnt</td>';
+                html += '<td class="excel-cell excel-header-cell excel-jersey-blauw" style="font-size: 7px;">🔵</td>';
+                html += '<td class="excel-cell excel-header-cell excel-jersey-geel" style="font-size: 7px;">🟡</td>';
+            }
+            html += '</tr>';
+            
+            // Participant rows
+            sortedParticipants.forEach((participant, index) => {
+                html += '<tr class="excel-rider-row">';
+                
+                // Ranking and name
+                html += `<td class="excel-cell">${index + 1}</td>`;
+                html += `<td class="excel-cell excel-name-cell">${participant.name}</td>`;
+                
+                // Stage data (3 columns per stage)
+                let totalBlueJerseys = 0;
+                let totalYellowJerseys = 0;
+                
+                for (let stage = 0; stage < currentStage; stage++) {
+                    const stagePoints = participant.stagePoints[stage] || 0;
+                    
+                    // Points column
+                    html += `<td class="excel-cell excel-points-cell">${stagePoints}</td>`;
+                    
+                    // Blue jersey column (daily winner)
+                    const isDailyWinner = dailyWinners[stage] && dailyWinners[stage].some(p => p.name === participant.name);
+                    if (isDailyWinner) {
+                        html += '<td class="excel-cell excel-jersey-blauw">🔵</td>';
+                        totalBlueJerseys++;
+                    } else {
+                        html += '<td class="excel-cell"></td>';
+                    }
+                    
+                    // Yellow jersey column (general classification leader)
+                    const isGeneralLeader = generalLeaders[stage] && generalLeaders[stage].some(p => p.name === participant.name);
+                    if (isGeneralLeader) {
+                        html += '<td class="excel-cell excel-jersey-geel">🟡</td>';
+                        totalYellowJerseys++;
+                    } else {
+                        html += '<td class="excel-cell"></td>';
+                    }
+                }
+                
+                // Total columns
+                html += `<td class="excel-cell excel-points-cell"><strong>${participant.totalPoints}</strong></td>`;
+                html += `<td class="excel-cell"><strong>${index + 1}</strong></td>`;
+                html += `<td class="excel-cell excel-jersey-blauw">${totalBlueJerseys}</td>`;
+                html += `<td class="excel-cell excel-jersey-geel">${totalYellowJerseys}</td>`;
+                
+                html += '</tr>';
+            });
+            
+            html += '</table>';
+            container.innerHTML = html;
+        }
+
+        function loadMatrixExcelView() {
+            const container = document.getElementById('matrixGrid');
+            
+            if (participants.length === 0) {
+                container.innerHTML = '<div style="padding: 40px; text-align: center; color: #666;">Upload eerst Excel data om de matrix weergave te zien</div>';
+                return;
+            }
+            
+            // Create rider statistics
+            const riderStats = {};
+            participants.forEach(participant => {
+                participant.team.forEach(rider => {
+                    if (!riderStats[rider.name]) {
+                        riderStats[rider.name] = {
+                            name: rider.name,
+                            selectedBy: [],
+                            totalSelections: 0
+                        };
+                    }
+                    riderStats[rider.name].selectedBy.push(participant.name);
+                    riderStats[rider.name].totalSelections++;
+                });
+            });
+            
+            const riders = Object.values(riderStats).sort((a, b) => b.totalSelections - a.totalSelections);
+            
+            // Create Excel-like table
+            let html = '<table style="border-collapse: collapse; width: 100%; font-size: 10px;">';
+            
+            // Header row
+            html += '<tr>';
+            html += '<td class="excel-cell excel-header-cell excel-name-cell">Renner</td>';
+            html += '<td class="excel-cell excel-header-cell" style="min-width: 40px;">Totaal</td>';
+            
+            participants.forEach(participant => {
+                html += `<td class="excel-cell excel-header-cell" style="min-width: 25px; font-size: 8px; writing-mode: vertical-lr; text-orientation: mixed;" title="${participant.name}">${participant.name}</td>`;
+            });
+            
+            html += '</tr>';
+            
+            // Rider rows
+            riders.forEach(rider => {
+                html += '<tr class="excel-rider-row">';
+                html += `<td class="excel-cell excel-name-cell">${rider.name}</td>`;
+                html += `<td class="excel-cell excel-points-cell">${rider.totalSelections}</td>`;
+                
+                participants.forEach(participant => {
+                    const isSelected = rider.selectedBy.includes(participant.name);
+                    if (isSelected) {
+                        html += '<td class="excel-cell excel-selected-cell">●</td>';
+                    } else {
+                        html += '<td class="excel-cell" style="background: #f5f5f5;"></td>';
+                    }
+                });
+                
+                html += '</tr>';
+            });
+            
+            html += '</table>';
+            container.innerHTML = html;
+        }
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚴‍♂️ Tour de France App Loading...');
+            
+            loadParticipantsTable();
+            updatePodiums();
+            
+            document.getElementById('detailView').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeDetailView();
+                }
+            });
+            
+            console.log('✅ App initialized! Upload your team file to get started.');
+        });
+    </script>
+</body>
+</html>
