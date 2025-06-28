@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tour de France Poule 2024</title>
+    
+    <!-- External Dependencies -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="header">
+        <h1>🚴‍♂️ Tour de France Poule 2024</h1>
+        <div class="nav-tabs">
+            <button class="nav-tab active" onclick="showTab('home')">🏠 Home</button>
+            <button class="nav-tab" onclick="showTab('participants')">👥 Deelnemers Score</button>
+            <button class="nav-tab" onclick="showTab('riders')">🚴 Renners Score</button>
+            <button class="nav-tab" onclick="showTab('matrix')">📊 Renners Gekozen</button>
+            <button class="nav-tab" onclick="showTab('daily-prizes')">🏆 Dagprijzen</button>
+            <button class="nav-tab" onclick="showTab('excel-view')">📊 Excel View</button>
+            <button class="nav-tab" onclick="showTab('admin')">⚙️ Admin</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- HOME TAB -->
+        <div id="home" class="tab-content active">
+            <!-- Getting Started Section -->
+            <div class="card" id="gettingStarted" style="text-align: center; background: linear-gradient(135deg, #f093fb, #f5576c); color: white;">
+                <h2>🚀 Welkom bij je Tour de France Poule!</h2>
+                <p style="font-size: 1.1em; margin: 20px 0;">Om te beginnen heb je 1 Excel bestand nodig:</p>
+                <div style="text-align: center; margin: 30px 0;">
+                    <div style="background: rgba(255,255,255,0.2); padding: 20px; border-radius: 10px; max-width: 400px; margin: 0 auto;">
+                        <h3>📊 Excel Bestand</h3>
+                        <p>Eén Excel bestand met alle data:<br>Renners, Deelnemers, Punten, Uitslagen</p>
+                        <button class="btn" onclick="showTab('admin')" style="margin-top: 10px;">Go to Admin</button>
+                    </div>
+                </div>
+                <p style="margin-top: 20px;"><em>👆 Download eerst het voorbeeld Excel bestand in het Admin tabblad!</em></p>
+            </div>
+
+            <div class="dashboard-grid">
+                <!-- Daily Podium -->
+                <div class="card podium">
+                    <h2 id="dailyPodiumTitle">🔵 Dagpodium</h2>
+                    <div class="podium-places">
+                        <!-- Filled by JavaScript -->
+                    </div>
+                </div>
+
+                <!-- General Classification Podium -->
+                <div class="card podium">
+                    <h2>🟡 Algemeen Klassement</h2>
+                    <div class="podium-places">
+                        <!-- Filled by JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Daily Wins Podium -->
+                <div class="card podium">
+                    <h2>🏆 Meeste Dagoverwinningen</h2>
+                    <div class="podium-places">
+                        <!-- Filled by JavaScript -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stage Information -->
+            <div class="stage-info" id="stageInfoContainer" style="display: none;">
+                <div class="stage-card">
+                    <h3 id="currentStageTitle">🗓️ Vandaag</h3>
+                    <p id="currentStageName"><strong>-</strong></p>
+                    <p id="currentStageDetails">- | -</p>
+                    <p id="currentStageDescription">-</p>
+                </div>
+                <div class="stage-card">
+                    <h3 id="nextStageTitle">🗓️ Morgen</h3>
+                    <p id="nextStageName"><strong>-</strong></p>
+                    <p id="nextStageDetails">- | -</p>
+                    <p id="nextStageDescription">-</p>
+                </div>
+            </div>
+
+            <!-- Stories -->
+            <div class="story-section" id="todayStorySection" style="display: none;">
+                <h3>📰 Verhaal van Vandaag</h3>
+                <div class="story-text" id="todayStory">
+                    <!-- Filled by uploaded data -->
+                </div>
+            </div>
+
+            <div class="story-section" id="tomorrowStorySection" style="display: none;">
+                <h3>🔮 Vooruitblik op Morgen</h3>
+                <div class="story-text" id="tomorrowStory">
+                    <!-- Filled by uploaded data -->
+                </div>
+            </div>
+        </div>
+
+        <!-- PARTICIPANTS TAB -->
+        <div id="participants" class="tab-content">
+            <div class="card">
+                <h2>👥 Deelnemers Score</h2>
+                <div class="table-container">
+                    <div class="table-scroll">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Pos</th>
+                                    <th>Deelnemer</th>
+                                    <th>Totaal Punten</th>
+                                    <th>Dagoverwinningen</th>
+                                    <th>Laatste Etappe</th>
+                                    <th>Acties</th>
+                                </tr>
+                            </thead>
+                            <tbody id="participantsTable">
+                                <!-- Filled by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIDERS TAB -->
+        <div id="riders" class="tab-content">
+            <div class="card">
+                <h2>🚴 Renners Score</h2>
+                <div class="table-container">
+                    <div class="table-scroll">
+                        <table>
+                            <thead>
+                                <tr id="ridersTableHeader">
+                                    <th>Pos</th>
+                                    <th>Renner</th>
+                                    <th>Totaal</th>
+                                    <th>Et 1</th>
+                                    <th>Et 2</th>
+                                    <th>Et 3</th>
+                                    <th>Et 4</th>
+                                    <th>Et 5</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ridersTable">
+                                <!-- Filled by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MATRIX TAB -->
+        <div id="matrix" class="tab-content">
+            <div class="card">
+                <h2>📊 Renners Gekozen Matrix</h2>
+                <p style="margin-bottom: 20px; font-style: italic; color: #667eea;">Moderne matrix view - scroll horizontaal en verticaal</p>
+                <div class="matrix-container">
+                    <div class="matrix-scroll">
+                        <table class="matrix-table">
+                            <thead id="matrixHeader">
+                                <!-- Filled by JavaScript -->
+                            </thead>
+                            <tbody id="matrixTable">
+                                <!-- Filled by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- DAILY PRIZES TAB -->
+        <div id="daily-prizes" class="tab-content">
+            <div class="card">
+                <h2>🏆 Dagprijzen Overzicht</h2>
+                <p style="margin-bottom: 20px; font-style: italic;">Exact zoals jullie gewend zijn - dagwinnaars in blauw gemarkeerd!</p>
+                <div class="table-container">
+                    <div class="table-scroll">
+                        <table>
+                            <thead>
+                                <tr id="dailyPrizesHeader">
+                                    <th>Rang</th>
+                                    <th>Deelnemer</th>
+                                    <th>Totaal</th>
+                                    <th>Dagoverwinningen</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dailyPrizesTable">
+                                <!-- Filled by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- EXCEL VIEW TAB -->
+        <div id="excel-view" class="tab-content">
+            <div class="card">
+                <h2>📊 Excel Weergave - Exact zoals EJM & PVE</h2>
+                <p>Deze weergave bootst de originele Excel sheets exact na met gele en blauwe truien!</p>
+                
+                <!-- Excel Tab Buttons -->
+                <div style="margin: 20px 0;">
+                    <button class="btn excel-tab-btn active" onclick="showExcelTab('hoofdprijs')">📊 Hoofdprijs</button>
+                    <button class="btn excel-tab-btn" onclick="showExcelTab('matrix')">🔗 Renners Matrix</button>
+                </div>
+                
+                <!-- Hoofdprijs Excel View -->
+                <div id="excel-hoofdprijs" class="excel-tab-content active">
+                    <div style="background: white; border: 1px solid #ccc; border-radius: 8px; overflow: hidden;">
+                        <!-- Milka Header Section -->
+                        <div style="background: linear-gradient(45deg, #FFD700, #FFA500); padding: 10px; border-bottom: 2px solid #333;">
+                            <div style="display: flex; align-items: center; gap: 15px;">
+                                <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiByeD0iOCIgZmlsbD0iIzY2M0Q5OSIvPgo8dGV4dCB4PSIzMCIgeT0iMzUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5NSUxLQTwvdGV4dD4KPC9zdmc+" alt="Milka" style="width: 60px; height: 60px;">
+                                <div>
+                                    <h3 style="margin: 0; color: #333; font-size: 1.4em;">Hoofdprijs</h3>
+                                    <p style="margin: 0; color: #666; font-size: 0.9em;">Tour de France 2024 - Live Scores</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Excel-like Grid -->
+                        <div id="hoofdprijsGrid" class="excel-grid">
+                            <!-- Will be filled by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Matrix Excel View -->
+                <div id="excel-matrix" class="excel-tab-content">
+                    <div style="background: white; border: 1px solid #ccc; border-radius: 8px; overflow: hidden;">
+                        <div style="padding: 15px; border-bottom: 1px solid #ddd;">
+                            <h3 style="margin: 0; color: #333;">Renners Selectie Matrix</h3>
+                            <p style="margin: 5px 0 0 0; color: #666; font-size: 0.9em;">Groene vakjes = renner geselecteerd</p>
+                        </div>
+                        
+                        <div id="matrixGrid" class="excel-grid">
+                            <!-- Will be filled by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ADMIN TAB -->
+        <div id="admin" class="tab-content">
+            <div class="card">
+                <h2>⚙️ Data Management</h2>
+                
+                <div class="file-upload" onclick="document.getElementById('excelFile').click()">
+                    <h3>📊 Upload Tour de France Excel</h3>
+                    <p>Upload het Excel bestand met alle data (tabs: Renners, Deelnemers, Etappe punten, Eindklassement punten, Etappe uitslagen)</p>
+                    <input type="file" id="excelFile" accept=".xlsx,.xls" onchange="handleExcelFile(event)">
+                    <a href="tdf.xlsx" download="TourDeFrance_Voorbeeld.xlsx" class="btn" style="margin-top: 10px; text-decoration: none; display: inline-block;" onclick="event.stopPropagation();">📥 Download Voorbeeld</a>
+                </div>
+
+                <div style="text-align: center; margin: 30px 0;">
+                    <button class="btn" onclick="exportData()">💾 Export Data</button>
+                    <button class="btn" onclick="resetData()">🔄 Reset Data</button>
+                </div>
+
+                <div style="margin-top: 30px; padding: 20px; background: #f5f5f5; border-radius: 10px;">
+                    <h3>📋 Instructies:</h3>
+                    <ol style="margin: 15px 0; padding-left: 20px; line-height: 1.6;">
+                        <li><strong>Download het voorbeeld Excel bestand</strong> om de juiste structuur te zien</li>
+                        <li><strong>Upload je Excel bestand</strong> met alle data in de juiste tabs</li>
+                        <li><strong>Update dagelijks</strong> de 'Etappe uitslagen' tab en upload opnieuw</li>
+                        <li><strong>Alle berekeningen</strong> gebeuren automatisch</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detail View Modal -->
+    <div id="detailView" class="detail-view">
+        <div class="detail-content">
+            <button class="close-btn" onclick="closeDetailView()">&times;</button>
+            <div id="detailContent">
+                <!-- Filled by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript -->
+    <script src="js/app.js"></script>
+    <script src="js/excel-handler.js"></script>
+    <script src="js/ui-components.js"></script>
+</body>
+</html>
