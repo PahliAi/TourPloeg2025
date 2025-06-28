@@ -21,7 +21,7 @@
             <button class="nav-tab" onclick="showTab('matrix')">📊 Renners Gekozen</button>
             <button class="nav-tab" onclick="showTab('daily-prizes')">🏆 Dagprijzen</button>
             <button class="nav-tab" onclick="showTab('excel-view')">📊 Excel View</button>
-            <button class="nav-tab" onclick="showTab('admin')">🔐 Admin</button>
+            <button class="nav-tab" onclick="showTab('upload')">📊 Upload</button>
         </div>
     </div>
 
@@ -36,10 +36,10 @@
                     <div style="background: rgba(255,255,255,0.2); padding: 20px; border-radius: 10px; max-width: 400px; margin: 0 auto;">
                         <h3>📊 Excel Bestand</h3>
                         <p>Eén Excel bestand met alle data:<br>Renners, Deelnemers, Punten, Uitslagen</p>
-                        <button class="btn" onclick="showTab('admin')" style="margin-top: 10px;">Go to Admin</button>
+                        <button class="btn" onclick="showTab('upload')" style="margin-top: 10px;">Go to Upload</button>
                     </div>
                 </div>
-                <p style="margin-top: 20px;"><em>👆 Download eerst het voorbeeld Excel bestand in het Admin tabblad!</em></p>
+                <p style="margin-top: 20px;"><em>👆 Download eerst het voorbeeld Excel bestand in het Upload tabblad!</em></p>
             </div>
 
             <div class="dashboard-grid">
@@ -159,7 +159,6 @@
         <div id="matrix" class="tab-content">
             <div class="card">
                 <h2>📊 Renners Gekozen Matrix</h2>
-                <p style="margin-bottom: 20px; font-style: italic; color: #667eea;">Moderne matrix view - scroll horizontaal en verticaal</p>
                 <div class="matrix-container">
                     <div class="matrix-scroll">
                         <table class="matrix-table">
@@ -179,7 +178,6 @@
         <div id="daily-prizes" class="tab-content">
             <div class="card">
                 <h2>🏆 Dagprijzen Overzicht</h2>
-                <p style="margin-bottom: 20px; font-style: italic;">Exact zoals jullie gewend zijn - dagwinnaars in blauw gemarkeerd!</p>
                 <div class="table-container">
                     <div class="table-scroll">
                         <table>
@@ -203,8 +201,7 @@
         <!-- EXCEL VIEW TAB -->
         <div id="excel-view" class="tab-content">
             <div class="card">
-                <h2>📊 Excel Weergave - Exact zoals EJM & PVE</h2>
-                <p>Deze weergave bootst de originele Excel sheets exact na met gele en blauwe truien!</p>
+                <h2>📊 Excel Weergave</h2>
                 
                 <!-- Excel Tab Buttons -->
                 <div style="margin: 20px 0;">
@@ -249,16 +246,17 @@
             </div>
         </div>
 
-        <!-- ADMIN TAB -->
-        <div id="admin" class="tab-content">
+        <!-- UPLOAD TAB -->
+        <div id="upload" class="tab-content">
             <div class="card">
-                <h2>⚙️ Data Management</h2>
+                <h2>📊 Excel Upload</h2>
                 
                 <div class="file-upload" onclick="document.getElementById('excelFile').click()">
                     <h3>📊 Upload Tour de France Excel</h3>
                     <p>Upload het Excel bestand met alle data (tabs: Renners, Deelnemers, Etappe punten, Eindklassement punten, Etappe uitslagen)</p>
-                    <input type="file" id="excelFile" accept=".xlsx,.xls" onchange="handleExcelFile(event)">
-                    <a href="tdf.xlsx" download="TourDeFrance_Voorbeeld.xlsx" class="btn" style="margin-top: 10px; text-decoration: none; display: inline-block;" onclick="event.stopPropagation();">📥 Download Voorbeeld</a>
+                    <p style="font-size: 0.9em; color: #666; margin-top: 10px;">📊 Upload je Excel bestand en zie direct alle resultaten</p>
+                    <input type="file" id="excelFile" accept=".xlsx,.xls">
+                    <a href="tdf-current.xlsx" download="TourDeFrance_Voorbeeld.xlsx" class="btn" style="margin-top: 10px; text-decoration: none; display: inline-block;" onclick="event.stopPropagation();">📥 Download Voorbeeld</a>
                 </div>
 
                 <div style="text-align: center; margin: 30px 0;">
@@ -267,13 +265,17 @@
                 </div>
 
                 <div style="margin-top: 30px; padding: 20px; background: #f5f5f5; border-radius: 10px;">
-                    <h3>📋 Instructies:</h3>
+                    <h3>📋 Hoe werkt het:</h3>
                     <ol style="margin: 15px 0; padding-left: 20px; line-height: 1.6;">
                         <li><strong>Download het voorbeeld Excel bestand</strong> om de juiste structuur te zien</li>
-                        <li><strong>Upload je Excel bestand</strong> met alle data in de juiste tabs</li>
-                        <li><strong>Update dagelijks</strong> de 'Etappe uitslagen' tab en upload opnieuw</li>
-                        <li><strong>Alle berekeningen</strong> gebeuren automatisch</li>
+                        <li><strong>Upload je Excel bestand</strong> - de app verwerkt automatisch alle data</li>
+                        <li><strong>Bekijk alle resultaten</strong> in de verschillende tabbladen</li>
+                        <li><strong>Test en experimenteer</strong> met verschillende Excel bestanden</li>
                     </ol>
+                    
+                    <div style="margin-top: 15px; padding: 15px; background: #e7f3ff; border-radius: 6px; border-left: 4px solid #007cba;">
+                        <strong>💡 Tip:</strong> Je uploadt gewoon je originele Excel bestand - de app doet alle berekeningen automatisch.
+                    </div>
                 </div>
             </div>
         </div>
@@ -292,6 +294,7 @@
     <!-- JavaScript -->
     <script src="js/app.js"></script>
     <script src="js/excel-handler.js"></script>
+    <script src="js/excel-persistence.js"></script>
     <script src="js/ui-components.js"></script>
 </body>
 </html>

@@ -4,60 +4,10 @@ let participants = [];
 let allRiders = [];
 let currentStage = 1;
 
-// Admin access control
-let isAdminAuthenticated = false;
-// Admin password hash - gebruik om nieuwe hash te maken
-const ADMIN_HASH = "a2793a037ce1da501345b1139411e74f602708e1b408ceb2c812391f891ed767";
-
-// Simple hash function (SHA-256 simulation)
-async function hashPassword(password) {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(password);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-}
-
-async function authenticateAdmin() {
-    const password = prompt("🔐 Admin toegang vereist\n\nVoer het admin wachtwoord in:");
-    if (password === null) return false; // User cancelled
-    
-    try {
-        const passwordHash = await hashPassword(password);
-        console.log("Ingevoerde hash:", passwordHash);
-        console.log("Verwachte hash:", ADMIN_HASH);
-        console.log("Match:", passwordHash === ADMIN_HASH);
-        
-        if (passwordHash === ADMIN_HASH) {
-            isAdminAuthenticated = true;
-            return true;
-        } else {
-            alert("❌ Onjuist wachtwoord. Geen toegang tot Admin functies.");
-        }
-    } catch (error) {
-        console.error('Hash error:', error);
-        alert("❌ Authenticatie fout. Probeer opnieuw.");
-    }
-    return false;
-}
-
-// Utility function om nieuwe wachtwoorden te hashen (alleen voor development)
-async function generatePasswordHash(password) {
-    const hash = await hashPassword(password);
-    console.log(`Hash voor "${password}": ${hash}`);
-    return hash;
-}
+// No admin authentication needed - simplified access
 
 // Tab navigation
-async function showTab(tabName) {
-    // Check admin authentication
-    if (tabName === 'admin' && !isAdminAuthenticated) {
-        const authenticated = await authenticateAdmin();
-        if (!authenticated) {
-            return; // Block access if authentication fails
-        }
-    }
-
+function showTab(tabName) {
     document.querySelectorAll('.tab-content').forEach(tab => {
         tab.classList.remove('active');
     });
@@ -85,6 +35,9 @@ async function showTab(tabName) {
         case 'excel-view':
             loadHoofdprijsExcelView();
             loadMatrixExcelView();
+            break;
+        case 'upload':
+            // Upload tab - no special loading needed
             break;
     }
 }
@@ -322,11 +275,6 @@ function updateTableHeaders() {
 
 // Utility functions
 function exportData() {
-    if (!isAdminAuthenticated) {
-        alert("❌ Geen toegang. Admin authenticatie vereist.");
-        return;
-    }
-
     const data = {
         participants: participants,
         allRiders: allRiders,
@@ -344,11 +292,6 @@ function exportData() {
 }
 
 function resetData() {
-    if (!isAdminAuthenticated) {
-        alert("❌ Geen toegang. Admin authenticatie vereist.");
-        return;
-    }
-
     if (confirm('Weet je zeker dat je alle data wilt resetten?')) {
         participants = [];
         allRiders = [];
@@ -369,7 +312,7 @@ function resetData() {
 }
 
 // Initialize the application
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
     console.log('🚴‍♂️ Tour de France App Loading...');
     
     loadParticipantsTable();
@@ -381,5 +324,10 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    console.log('✅ App initialized! Upload your team file to get started.');
+    // Initialize Excel persistence (auto-load saved data)
+    if (typeof ExcelPersistence !== 'undefined') {
+        await ExcelPersistence.initialize();
+    }
+    
+    console.log('✅ App initialized!');
 });
