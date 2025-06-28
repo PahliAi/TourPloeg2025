@@ -7,7 +7,7 @@ let currentStage = 1;
 // Admin access control
 let isAdminAuthenticated = false;
 // Admin password hash - gebruik om nieuwe hash te maken
-const ADMIN_HASH = "0a2793a037ce1da501345b1139411e74f602708e1b408ceb2c812391f891ed767";
+const ADMIN_HASH = "0a2793a037ce1da501345b1139411e74f602708e1b408ceb2c812391f891ed76";
 
 // Simple hash function (SHA-256 simulation)
 async function hashPassword(password) {
@@ -24,6 +24,10 @@ async function authenticateAdmin() {
     
     try {
         const passwordHash = await hashPassword(password);
+        console.log("Ingevoerde hash:", passwordHash);
+        console.log("Verwachte hash:", ADMIN_HASH);
+        console.log("Match:", passwordHash === ADMIN_HASH);
+        
         if (passwordHash === ADMIN_HASH) {
             isAdminAuthenticated = true;
             return true;
