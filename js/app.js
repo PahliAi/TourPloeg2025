@@ -7,7 +7,7 @@ let currentStage = 1;
 // Admin access control
 let isAdminAuthenticated = false;
 // Admin password hash - gebruik om nieuwe hash te maken
-const ADMIN_HASH = "0a2793a037ce1da501345b1139411e74f602708e1b408ceb2c812391f891ed76";
+const ADMIN_HASH = "a2793a037ce1da501345b1139411e74f602708e1b408ceb2c812391f891ed767";
 
 // Simple hash function (SHA-256 simulation)
 async function hashPassword(password) {
