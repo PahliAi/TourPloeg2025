@@ -1,4 +1,4 @@
-# 🚴‍♂️ Tour de France Poule 2024
+# 🚴‍♂️ Tour de France Poule
 
 Een moderne webapplicatie voor het beheren van je Tour de France wedpools. Upload één Excel bestand en de applicatie berekent automatisch alle scores, dagwinnaars en klassementen.
 
@@ -13,7 +13,7 @@ Een moderne webapplicatie voor het beheren van je Tour de France wedpools. Uploa
 
 ## 🚀 Quick Start
 
-1. **Open de applicatie**: [Live Demo](https://pahliai.github.io/TourPloeg) of open `index.html` lokaal
+1. **Open de applicatie**: [Live Demo](https://pahliai.github.io/TourPloeg2025) of open `index.html` lokaal
 2. **Download voorbeeld**: Ga naar Admin tab → Download Voorbeeld Excel
 3. **Upload je data**: Vul het Excel bestand in en upload
 
@@ -99,7 +99,7 @@ Trui      | Groen   | 5
 ### Local Development
 ```bash
 # Clone repository
-git clone https://github.com/PahliAi/TourPloeg.git
+git clone https://github.com/PahliAi/TourPloeg2025.git
 cd TourPloeg
 
 # Open in browser (geen build process nodig)
@@ -113,7 +113,7 @@ open index.html
 ### GitHub Pages Deployment
 1. Push naar main branch
 2. Settings → Pages → Deploy from branch → main
-3. Je app is live op: `https://pahliai.github.io/TourPloeg`
+3. Je app is live op: `https://pahliai.github.io/TourPloeg2025`
 
 ## 🛠️ Tech Stack
 

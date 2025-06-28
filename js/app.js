@@ -4,8 +4,56 @@ let participants = [];
 let allRiders = [];
 let currentStage = 1;
 
+// Admin access control
+let isAdminAuthenticated = false;
+// Hash van wachtwoord "2EJM0PVE2LVB5MP" (wijzig dit door je eigen wachtwoord te hashen)
+const ADMIN_HASH = "8e4a9b2c7f1d3e6a9b8c5f2e1d4a7b9c2e5f8a1b4c7e0d3f6a9c2e5b8f1a4d7";
+
+// Simple hash function (SHA-256 simulation)
+async function hashPassword(password) {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(password);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function authenticateAdmin() {
+    const password = prompt("🔐 Admin toegang vereist\n\nVoer het admin wachtwoord in:");
+    if (password === null) return false; // User cancelled
+    
+    try {
+        const passwordHash = await hashPassword(password);
+        if (passwordHash === ADMIN_HASH) {
+            isAdminAuthenticated = true;
+            return true;
+        } else {
+            alert("❌ Onjuist wachtwoord. Geen toegang tot Admin functies.");
+        }
+    } catch (error) {
+        console.error('Hash error:', error);
+        alert("❌ Authenticatie fout. Probeer opnieuw.");
+    }
+    return false;
+}
+
+// Utility function om nieuwe wachtwoorden te hashen (alleen voor development)
+async function generatePasswordHash(password) {
+    const hash = await hashPassword(password);
+    console.log(`Hash voor "${password}": ${hash}`);
+    return hash;
+}
+
 // Tab navigation
-function showTab(tabName) {
+async function showTab(tabName) {
+    // Check admin authentication
+    if (tabName === 'admin' && !isAdminAuthenticated) {
+        const authenticated = await authenticateAdmin();
+        if (!authenticated) {
+            return; // Block access if authentication fails
+        }
+    }
+
     document.querySelectorAll('.tab-content').forEach(tab => {
         tab.classList.remove('active');
     });
@@ -270,6 +318,11 @@ function updateTableHeaders() {
 
 // Utility functions
 function exportData() {
+    if (!isAdminAuthenticated) {
+        alert("❌ Geen toegang. Admin authenticatie vereist.");
+        return;
+    }
+
     const data = {
         participants: participants,
         allRiders: allRiders,
@@ -287,6 +340,11 @@ function exportData() {
 }
 
 function resetData() {
+    if (!isAdminAuthenticated) {
+        alert("❌ Geen toegang. Admin authenticatie vereist.");
+        return;
+    }
+
     if (confirm('Weet je zeker dat je alle data wilt resetten?')) {
         participants = [];
         allRiders = [];

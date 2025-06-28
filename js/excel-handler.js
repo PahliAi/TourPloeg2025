@@ -2,6 +2,13 @@
 
 // File handling functions
 function handleExcelFile(event) {
+    // Check admin authentication
+    if (!isAdminAuthenticated) {
+        alert("❌ Geen toegang. Admin authenticatie vereist.");
+        event.target.value = ''; // Clear file input
+        return;
+    }
+
     const file = event.target.files[0];
     if (!file) return;
     
