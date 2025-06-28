@@ -6,8 +6,8 @@ let currentStage = 1;
 
 // Admin access control
 let isAdminAuthenticated = false;
-// Hash van wachtwoord "2EJM0PVE2LVB5MP" (wijzig dit door je eigen wachtwoord te hashen)
-const ADMIN_HASH = "8e4a9b2c7f1d3e6a9b8c5f2e1d4a7b9c2e5f8a1b4c7e0d3f6a9c2e5b8f1a4d7";
+// Admin password hash - gebruik om nieuwe hash te maken
+const ADMIN_HASH = "0a2793a037ce1da501345b1139411e74f602708e1b408ceb2c812391f891ed767";
 
 // Simple hash function (SHA-256 simulation)
 async function hashPassword(password) {
