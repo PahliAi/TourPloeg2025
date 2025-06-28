@@ -9,7 +9,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     
     <!-- Styles -->
-    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/styles.css?v=1.1">
 </head>
 <body>
     <div class="header">
@@ -44,26 +44,38 @@
 
             <div class="dashboard-grid">
                 <!-- Daily Podium -->
-                <div class="card podium">
+                <div class="card podium" id="dailyPodium">
                     <h2 id="dailyPodiumTitle">🔵 Dagpodium</h2>
                     <div class="podium-places">
                         <!-- Filled by JavaScript -->
                     </div>
+                    <div class="podium-overlay" id="dailyOverlay">
+                        <img src="blauw-nb.png" alt="Blauwe Trui" class="podium-image">
+                        <div class="podium-winner-name" id="dailyWinnerName"></div>
+                    </div>
                 </div>
 
                 <!-- General Classification Podium -->
-                <div class="card podium">
+                <div class="card podium" id="generalPodium">
                     <h2>🟡 Algemeen Klassement</h2>
                     <div class="podium-places">
                         <!-- Filled by JavaScript -->
                     </div>
+                    <div class="podium-overlay" id="generalOverlay">
+                        <img src="geel-nb.png" alt="Gele Trui" class="podium-image">
+                        <div class="podium-winner-name" id="generalWinnerName"></div>
+                    </div>
                 </div>
 
                 <!-- Daily Wins Podium -->
-                <div class="card podium">
+                <div class="card podium" id="dailyWinsPodium">
                     <h2>🏆 Meeste Dagoverwinningen</h2>
                     <div class="podium-places">
                         <!-- Filled by JavaScript -->
+                    </div>
+                    <div class="podium-overlay" id="dailyWinsOverlay">
+                        <img src="milka-nb.png" alt="Milka Reep" class="podium-image">
+                        <div class="podium-winner-name" id="dailyWinsWinnerName"></div>
                     </div>
                 </div>
             </div>
@@ -111,10 +123,10 @@
                                 <tr>
                                     <th>Pos</th>
                                     <th>Deelnemer</th>
-                                    <th>Totaal Punten</th>
-                                    <th>Dagoverwinningen</th>
-                                    <th>Laatste Etappe</th>
-                                    <th>Acties</th>
+                                    <th>Totaal</th>
+                                    <th>Blauwe truien</th>
+                                    <th>Gele truien</th>
+                                    <th>Ploeg</th>
                                 </tr>
                             </thead>
                             <tbody id="participantsTable">
@@ -201,7 +213,6 @@
         <!-- EXCEL VIEW TAB -->
         <div id="excel-view" class="tab-content">
             <div class="card">
-                <h2>📊 Excel Weergave</h2>
                 
                 <!-- Excel Tab Buttons -->
                 <div style="margin: 20px 0;">
@@ -212,16 +223,6 @@
                 <!-- Hoofdprijs Excel View -->
                 <div id="excel-hoofdprijs" class="excel-tab-content active">
                     <div style="background: white; border: 1px solid #ccc; border-radius: 8px; overflow: hidden;">
-                        <!-- Milka Header Section -->
-                        <div style="background: linear-gradient(45deg, #FFD700, #FFA500); padding: 10px; border-bottom: 2px solid #333;">
-                            <div style="display: flex; align-items: center; gap: 15px;">
-                                <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiByeD0iOCIgZmlsbD0iIzY2M0Q5OSIvPgo8dGV4dCB4PSIzMCIgeT0iMzUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNCIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IndoaXRlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5NSUxLQTwvdGV4dD4KPC9zdmc+" alt="Milka" style="width: 60px; height: 60px;">
-                                <div>
-                                    <h3 style="margin: 0; color: #333; font-size: 1.4em;">Hoofdprijs</h3>
-                                    <p style="margin: 0; color: #666; font-size: 0.9em;">Tour de France 2024 - Live Scores</p>
-                                </div>
-                            </div>
-                        </div>
                         
                         <!-- Excel-like Grid -->
                         <div id="hoofdprijsGrid" class="excel-grid">
@@ -233,10 +234,6 @@
                 <!-- Matrix Excel View -->
                 <div id="excel-matrix" class="excel-tab-content">
                     <div style="background: white; border: 1px solid #ccc; border-radius: 8px; overflow: hidden;">
-                        <div style="padding: 15px; border-bottom: 1px solid #ddd;">
-                            <h3 style="margin: 0; color: #333;">Renners Selectie Matrix</h3>
-                            <p style="margin: 5px 0 0 0; color: #666; font-size: 0.9em;">Groene vakjes = renner geselecteerd</p>
-                        </div>
                         
                         <div id="matrixGrid" class="excel-grid">
                             <!-- Will be filled by JavaScript -->

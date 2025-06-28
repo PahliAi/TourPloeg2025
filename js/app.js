@@ -18,6 +18,11 @@ function showTab(tabName) {
     document.getElementById(tabName).classList.add('active');
     event.target.classList.add('active');
 
+    // Special animation for Home tab
+    if (tabName === 'home') {
+        triggerPodiumAnimation();
+    }
+
     // Load appropriate data
     switch(tabName) {
         case 'participants':
@@ -331,3 +336,70 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     console.log('✅ App initialized!');
 });
+
+// Podium Animation Challenge Function
+function triggerPodiumAnimation() {
+    console.log('🎨 Triggering podium animation...');
+    
+    // Only show animation if we have participants data
+    if (participants.length === 0) {
+        console.log('⏭️ No data yet - skipping animation');
+        return;
+    }
+    
+    // Get current winners for each category
+    const winners = getCurrentWinners();
+    
+    // Show overlays with winner names
+    showPodiumOverlay('dailyOverlay', 'dailyWinnerName', winners.daily);
+    showPodiumOverlay('generalOverlay', 'generalWinnerName', winners.general);
+    showPodiumOverlay('dailyWinsOverlay', 'dailyWinsWinnerName', winners.dailyWins);
+    
+    // Hide overlays after 5 seconds
+    setTimeout(() => {
+        hidePodiumOverlay('dailyOverlay');
+        hidePodiumOverlay('generalOverlay');
+        hidePodiumOverlay('dailyWinsOverlay');
+    }, 5000);
+}
+
+function getCurrentWinners() {
+    if (participants.length === 0) {
+        return { daily: 'Geen data', general: 'Geen data', dailyWins: 'Geen data' };
+    }
+    
+    // Daily winner (last stage)
+    const lastStageIndex = currentStage - 1;
+    const dailyRanking = [...participants].sort((a, b) => 
+        (b.stagePoints[lastStageIndex] || 0) - (a.stagePoints[lastStageIndex] || 0)
+    );
+    
+    // General classification leader
+    const generalRanking = [...participants].sort((a, b) => b.totalPoints - a.totalPoints);
+    
+    // Most daily wins leader
+    const dailyWinsRanking = [...participants].sort((a, b) => b.dailyWins - a.dailyWins);
+    
+    return {
+        daily: dailyRanking[0]?.name || 'Geen winnaar',
+        general: generalRanking[0]?.name || 'Geen winnaar', 
+        dailyWins: dailyWinsRanking[0]?.name || 'Geen winnaar'
+    };
+}
+
+function showPodiumOverlay(overlayId, nameId, winnerName) {
+    const overlay = document.getElementById(overlayId);
+    const nameElement = document.getElementById(nameId);
+    
+    if (overlay && nameElement) {
+        nameElement.textContent = winnerName;
+        overlay.classList.add('show');
+    }
+}
+
+function hidePodiumOverlay(overlayId) {
+    const overlay = document.getElementById(overlayId);
+    if (overlay) {
+        overlay.classList.remove('show');
+    }
+}

@@ -14,15 +14,31 @@ function loadParticipantsTable() {
     
     participants.forEach((participant, index) => {
         const row = document.createElement('tr');
-        const lastStagePoints = participant.stagePoints[currentStage - 1] || 0;
+        
+        // Count yellow jerseys (gele truien) - count stages where this participant was #1
+        let yellowJerseys = 0;
+        for (let stage = 0; stage < currentStage; stage++) {
+            let maxPoints = 0;
+            let leader = null;
+            participants.forEach(p => {
+                const stagePoints = p.stagePoints[stage] || 0;
+                if (stagePoints > maxPoints) {
+                    maxPoints = stagePoints;
+                    leader = p;
+                }
+            });
+            if (leader === participant && maxPoints > 0) {
+                yellowJerseys++;
+            }
+        }
         
         row.innerHTML = `
             <td><strong>${index + 1}</strong></td>
-            <td><span class="clickable" onclick="showParticipantDetail('${participant.name}')">${participant.name}</span></td>
+            <td>${participant.name}</td>
             <td class="points-cell">${participant.totalPoints}</td>
             <td class="points-cell">${participant.dailyWins} 🔵</td>
-            <td class="points-cell">${lastStagePoints}</td>
-            <td><button class="btn" style="padding: 5px 10px; font-size: 0.8em;" onclick="showParticipantDetail('${participant.name}')">Bekijk Ploeg</button></td>
+            <td class="points-cell">${yellowJerseys} 🟡</td>
+            <td><button class="btn" style="padding: 2px 6px; font-size: 0.7em;" onclick="showParticipantDetail('${participant.name}')">Bekijk</button></td>
         `;
         tbody.appendChild(row);
     });
@@ -103,7 +119,7 @@ function loadMatrixTable() {
         let participantCells = '';
         participants.forEach(participant => {
             const isSelected = rider.selectedBy.includes(participant.name);
-            const cellContent = isSelected ? '<span class="rider-selected">●</span>' : '';
+            const cellContent = isSelected ? '🟢' : '';
             participantCells += `<td>${cellContent}</td>`;
         });
         
@@ -447,8 +463,8 @@ function loadHoofdprijsExcelView() {
     html += '<tr>';
     for (let stage = 1; stage <= currentStage; stage++) {
         html += '<td class="excel-cell excel-header-cell" style="font-size: 7px;">Pnt</td>';
-        html += '<td class="excel-cell excel-header-cell excel-jersey-blauw" style="font-size: 7px;">🔵</td>';
-        html += '<td class="excel-cell excel-header-cell excel-jersey-geel" style="font-size: 7px;">🟡</td>';
+        html += '<td class="excel-cell excel-header-cell" style="font-size: 7px;">🔵</td>';
+        html += '<td class="excel-cell excel-header-cell" style="font-size: 7px;">🟡</td>';
     }
     html += '</tr>';
     
@@ -473,7 +489,7 @@ function loadHoofdprijsExcelView() {
             // Blue jersey column (daily winner)
             const isDailyWinner = dailyWinners[stage] && dailyWinners[stage].some(p => p.name === participant.name);
             if (isDailyWinner) {
-                html += '<td class="excel-cell excel-jersey-blauw">🔵</td>';
+                html += '<td class="excel-cell">🔵</td>';
                 totalBlueJerseys++;
             } else {
                 html += '<td class="excel-cell"></td>';
@@ -482,7 +498,7 @@ function loadHoofdprijsExcelView() {
             // Yellow jersey column (general classification leader)
             const isGeneralLeader = generalLeaders[stage] && generalLeaders[stage].some(p => p.name === participant.name);
             if (isGeneralLeader) {
-                html += '<td class="excel-cell excel-jersey-geel">🟡</td>';
+                html += '<td class="excel-cell">🟡</td>';
                 totalYellowJerseys++;
             } else {
                 html += '<td class="excel-cell"></td>';
@@ -492,8 +508,8 @@ function loadHoofdprijsExcelView() {
         // Total columns
         html += `<td class="excel-cell excel-points-cell"><strong>${participant.totalPoints}</strong></td>`;
         html += `<td class="excel-cell"><strong>${index + 1}</strong></td>`;
-        html += `<td class="excel-cell excel-jersey-blauw">${totalBlueJerseys}</td>`;
-        html += `<td class="excel-cell excel-jersey-geel">${totalYellowJerseys}</td>`;
+        html += `<td class="excel-cell">${totalBlueJerseys}</td>`;
+        html += `<td class="excel-cell">${totalYellowJerseys}</td>`;
         
         html += '</tr>';
     });
@@ -537,7 +553,7 @@ function loadMatrixExcelView() {
     html += '<td class="excel-cell excel-header-cell" style="min-width: 40px;">Totaal</td>';
     
     participants.forEach(participant => {
-        html += `<td class="excel-cell excel-header-cell" style="min-width: 25px; font-size: 8px; writing-mode: vertical-lr; text-orientation: mixed;" title="${participant.name}">${participant.name}</td>`;
+        html += `<td class="excel-cell excel-header-cell" style="min-width: 25px; height: 140px; font-size: 8px; writing-mode: vertical-lr; text-orientation: mixed; vertical-align: top; padding: 15px 4px;" title="${participant.name}">${participant.name}</td>`;
     });
     
     html += '</tr>';
@@ -551,7 +567,7 @@ function loadMatrixExcelView() {
         participants.forEach(participant => {
             const isSelected = rider.selectedBy.includes(participant.name);
             if (isSelected) {
-                html += '<td class="excel-cell excel-selected-cell">●</td>';
+                html += '<td class="excel-cell">🟢</td>';
             } else {
                 html += '<td class="excel-cell" style="background: #f5f5f5;"></td>';
             }
