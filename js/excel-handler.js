@@ -25,10 +25,7 @@ function handleExcelFile(event) {
     const file = event.target.files[0];
     if (!file) return;
     
-    console.log('📊 Excel file uploaded:', file.name);
-    
     // IMMEDIATE CACHE BUST - clear everything before processing
-    console.log('🧹 Pre-processing cache clear...');
     participants = [];
     allRiders = [];
     currentStage = 1;
@@ -52,7 +49,6 @@ function handleExcelFile(event) {
                 const data = new Uint8Array(e.target.result);
                 const workbook = XLSX.read(data, {type: 'array'});
                 
-                console.log('📋 Excel tabs gevonden:', workbook.SheetNames);
                 
                 // Verwachte tabs: Renners, Deelnemers, Etappe punten, Eindklassement punten, Etappe uitslagen
                 if (!workbook.SheetNames.includes('Renners')) {
@@ -101,45 +97,28 @@ function handleExcelFile(event) {
 
 function parseExcelData(workbook) {
     try {
-        console.log('🔍 PARSING EXCEL - ENTRY POINT');
-        console.log('  workbook.SheetNames:', workbook.SheetNames);
-        
         // Parse Renners tab
         const rennersSheet = workbook.Sheets['Renners'];
         const rennersData = XLSX.utils.sheet_to_json(rennersSheet, {header: 1});
-        console.log('🚴 Renners data:', rennersData);
         
         // Parse Deelnemers tab
         const deelnemersSheet = workbook.Sheets['Deelnemers'];
         const deelnemersData = XLSX.utils.sheet_to_json(deelnemersSheet, {header: 1});
-        console.log('👥 Deelnemers data:', deelnemersData);
         
         // Parse Etappe uitslagen tab - check for current data tab first
         let uitlagenSheetName = 'Etappe uitslagen';
         
-        // Priority order: 'Huidig' > current year > 'Etappe uitslagen'
+        // Priority order: 'Huidig' > 'Etappe uitslagen'
         if (workbook.SheetNames.includes('Huidig')) {
             uitlagenSheetName = 'Huidig';
-            console.log(`🎯 Using current data tab: Huidig`);
         } else if (workbook.SheetNames.includes('Etappe uitslagen')) {
             uitlagenSheetName = 'Etappe uitslagen';
-            console.log(`📋 Using default tab: Etappe uitslagen`);
         } else {
-            console.log('❌ No suitable uitslagen tab found');
             throw new Error('Geen geschikte etappe uitslagen tab gevonden');
         }
         
         const uitlagenSheet = workbook.Sheets[uitlagenSheetName];
         const uitlagenData = XLSX.utils.sheet_to_json(uitlagenSheet, {header: 1});
-        console.log(`🏆 Using tab '${uitlagenSheetName}' for etappe uitslagen:`, uitlagenData);
-        console.log('🔍 DETAILED UITSLAGEN ANALYSIS:');
-        console.log('  Sheet name used:', uitlagenSheetName);
-        console.log('  Row 0 (header):', uitlagenData[0]);
-        console.log('  Row 1 (pos 1):', uitlagenData[1]);
-        console.log('  Row 2 (pos 2):', uitlagenData[2]);
-        console.log('  Total rows:', uitlagenData.length);
-        console.log('  Total columns in header:', uitlagenData[0] ? uitlagenData[0].length : 0);
-        
         // Parse optionele punten tabs
         let etappePunten = null;
         let eindklassementPunten = null;
@@ -147,13 +126,11 @@ function parseExcelData(workbook) {
         if (workbook.SheetNames.includes('Etappe punten')) {
             const etappePuntenSheet = workbook.Sheets['Etappe punten'];
             etappePunten = XLSX.utils.sheet_to_json(etappePuntenSheet, {header: 1});
-            console.log('📊 Etappe punten:', etappePunten);
         }
         
         if (workbook.SheetNames.includes('Eindklassement punten')) {
             const eindklassementPuntenSheet = workbook.Sheets['Eindklassement punten'];
             eindklassementPunten = XLSX.utils.sheet_to_json(eindklassementPuntenSheet, {header: 1});
-            console.log('🏅 Eindklassement punten:', eindklassementPunten);
         }
         
         // Verwerk de data
@@ -165,13 +142,51 @@ function parseExcelData(workbook) {
         if (loadingMsg) loadingMsg.remove();
         
         alert('❌ Fout bij het verwerken van Excel data: ' + error.message);
-        console.error('Excel processing error:', error);
     }
 }
 
 function processExcelData(rennersData, deelnemersData, uitlagenData, etappePunten, eindklassementPunten) {
     // NUCLEAR RESET - clear ALL possible cache sources
-    console.log('🔄 NUCLEAR CACHE RESET - CLEARING EVERYTHING...');
+    
+    // Initialize from Renners tab - ALLE renners krijgen een entry
+    window.allRidersFromExcel = {};
+    let validRiders = 0;
+    let emptyRows = 0;
+    
+    if (rennersData && rennersData.length > 1) {
+        for (let i = 1; i < rennersData.length; i++) { // Skip header
+            if (rennersData[i][0] && rennersData[i][0].toString().trim() !== '') { // Als er een naam is
+                const riderName = rennersData[i][0].toString().trim();
+                const teamName = rennersData[i][1] || 'Onbekend';
+                window.allRidersFromExcel[riderName] = {
+                    name: riderName,
+                    team: teamName,
+                    points: new Array(22).fill(0),
+                    status: 'active',
+                    inTeam: false // Default, wordt later geupdate
+                };
+                validRiders++;
+            } else {
+                emptyRows++;
+            }
+        }
+    }
+    
+    console.log(`📊 Renners tab processing: ${validRiders} valid riders, ${emptyRows} empty rows, total processed: ${validRiders + emptyRows}`);
+    console.log(`📊 First 5 riders from Excel:`, Object.keys(window.allRidersFromExcel).slice(0, 5));
+    console.log(`📊 Total riders in window.allRidersFromExcel:`, Object.keys(window.allRidersFromExcel).length);
+    
+    // Store all rider names for debugging
+    window.allRiderNamesFromExcel = Object.keys(window.allRidersFromExcel);
+    console.log('📊 Sample rider names from Renners tab:');
+    window.allRiderNamesFromExcel.slice(0, 10).forEach(name => {
+        console.log(`   "${name}" (length: ${name.length})`);
+    });
+    
+    // Track total points that should be allocated
+    window.expectedTotalPoints = 0;
+    window.actualPointsAllocated = 0;
+    window.stagePointsBreakdown = {};
     
     // Reset all global arrays and variables
     participants = [];
@@ -193,9 +208,7 @@ function processExcelData(rennersData, deelnemersData, uitlagenData, etappePunte
     // Clear sessionStorage
     try {
         sessionStorage.clear();
-        console.log('🗑️ sessionStorage cleared');
     } catch(e) {
-        console.log('⚠️ Could not clear sessionStorage:', e);
     }
     
     // Clear all window variables that might exist
@@ -204,7 +217,6 @@ function processExcelData(rennersData, deelnemersData, uitlagenData, etappePunte
         if (key.includes('tourploeg') || key.includes('excel') || key.includes('cache') || key.includes('data')) {
             try {
                 delete window[key];
-                console.log('🗑️ Deleted window.' + key);
             } catch(e) {
                 // Some properties can't be deleted
             }
@@ -234,17 +246,13 @@ function processExcelData(rennersData, deelnemersData, uitlagenData, etappePunte
         localStorage.removeItem('data-cache');
         localStorage.removeItem('stage-cache');
         
-        console.log('🗑️ ALL cache completely cleared');
     } catch(e) {
-        console.log('⚠️ Could not clear some cache:', e);
     }
     
     // Force garbage collection if possible
     if (window.gc) {
         window.gc();
     }
-    
-    console.log('✅ Complete reset done - starting fresh processing...');
     
     // Verwerk renners lijst
     const availableRiders = [];
@@ -255,7 +263,6 @@ function processExcelData(rennersData, deelnemersData, uitlagenData, etappePunte
             }
         }
     }
-    console.log('✅ Beschikbare renners:', availableRiders);
     
     // Verwerk deelnemers en hun ploegen
     if (deelnemersData && deelnemersData.length > 0) {
@@ -292,7 +299,6 @@ function processExcelData(rennersData, deelnemersData, uitlagenData, etappePunte
         }
     }
     
-    console.log('✅ Deelnemers verwerkt:', participants.length);
     
     // Verwerk etappe uitslagen
     if (uitlagenData && uitlagenData.length > 1) {
@@ -314,35 +320,49 @@ function processExcelData(rennersData, deelnemersData, uitlagenData, etappePunte
         updateStageInfoFromExcel();
     }
     
-    // Final debug check
-    console.log('📊 FINAL PROCESSING COMPLETE:');
-    console.log('  currentStage:', currentStage);
-    console.log('  participants:', participants.length);
-    console.log('  allRiders:', allRiders.length);
-    console.log('  hasEindstandData:', window.hasEindstandData);
     
     // Verwijder loading message
     const loadingMsg = document.getElementById('loadingMsg');
     if (loadingMsg) loadingMsg.remove();
     
-    alert(`✅ Excel bestand succesvol geladen!\n${participants.length} deelnemers\n${availableRiders.length} renners\nCurrentStage: ${currentStage}\nEtappe uitslagen verwerkt`);
+    // Final comprehensive summary
+    console.log('🔍 === FINAL PROCESSING SUMMARY ===');
+    
+    const originalRiders = Object.values(window.allRidersFromExcel).filter(r => !r.createdDynamically).length;
+    const createdRiders = Object.values(window.allRidersFromExcel).filter(r => r.createdDynamically).length;
+    
+    console.log(`📊 Riders: ${originalRiders} from Excel Renners tab + ${createdRiders} created dynamically = ${Object.keys(window.allRidersFromExcel).length} total`);
+    
+    // Calculate expected vs actual points
+    window.expectedTotalPoints = 0;
+    Object.values(window.stagePointsBreakdown).forEach(stage => {
+        window.expectedTotalPoints += stage.expectedStagePoints;
+    });
+    
+    console.log(`💰 Points summary:`);
+    console.log(`   Expected total: ${window.expectedTotalPoints}`);
+    console.log(`   Actual allocated: ${window.actualPointsAllocated}`);
+    console.log(`   Missing: ${window.expectedTotalPoints - window.actualPointsAllocated}`);
+    
+    // Show breakdown by stage
+    Object.entries(window.stagePointsBreakdown).forEach(([stage, data]) => {
+        const stageLabel = stage == 22 ? 'Eindstand' : `Stage ${stage}`;
+        console.log(`   ${stageLabel}: ${data.actualPointsAllocated}/${data.expectedStagePoints} points, ${data.ridersNotFound.length} missing riders`);
+        if (data.ridersNotFound.length > 0) {
+            console.log(`     Missing riders:`, data.ridersNotFound);
+        }
+    });
+    
+    alert(`✅ Excel bestand succesvol geladen!\n${participants.length} deelnemers\n${availableRiders.length} renners\nCurrentStage: ${currentStage}\nCheck console voor details`);
 }
 
 function processEtappeUitslagen(uitlagenData, etappePunten, eindklassementPunten) {
-    // DEBUG: Log RAW Excel data to see what's actually in there
-    console.log('🔍 RAW EXCEL DEBUG:');
-    console.log('  uitlagenData.length:', uitlagenData.length);
-    console.log('  uitlagenData[0] (header):', uitlagenData[0]);
-    console.log('  uitlagenData[1] (first data row):', uitlagenData[1]);
-    
     // Bepaal aantal etappes gebaseerd op kolommen in uitslagen
     const headerRow = uitlagenData[0];
     const etappeColumns = [];
     
-    console.log('🔍 HEADER ROW ANALYSIS:');
     for (let col = 1; col < headerRow.length; col++) { // Skip eerste kolom (positie)
         const colValue = headerRow[col] ? headerRow[col].toString().trim() : '';
-        console.log(`  Column ${col}: "${colValue}" (type: ${typeof headerRow[col]})`);
         
         // Robuuste detectie: trimmed lowercase check voor eindstand
         const isEtappe = colValue.startsWith('Etappe-');
@@ -359,13 +379,8 @@ function processEtappeUitslagen(uitlagenData, etappePunten, eindklassementPunten
                 stage: stage,
                 isEindstand: isEindstand
             });
-            console.log(`    ✅ FOUND ETAPPE: ${colValue} -> Stage ${stage} (kolom ${col}) ${isEindstand ? '(EINDSTAND!)' : ''}`);
-        } else {
-            console.log(`    ❌ SKIPPED: "${colValue}" - not etappe/eind`);
         }
     }
-    
-    console.log('🔍 FOUND ETAPPE COLUMNS:', etappeColumns.map(col => `${col.name} (${col.stage})`));
     
     // Parse etappe info (datum, route, afstand, type) - HARD-CODED uit rijen 2-5
     const etappeInfo = {};
@@ -396,13 +411,6 @@ function processEtappeUitslagen(uitlagenData, etappePunten, eindklassementPunten
                 etappeInfo[stageNum].type = uitlagenData[4][etappeCol.col];
             }
             
-            console.log(`📅 Etappe ${stageNum} info parsed:`, {
-                datum: uitlagenData[1] ? uitlagenData[1][etappeCol.col] : 'missing',
-                route: uitlagenData[2] ? uitlagenData[2][etappeCol.col] : 'missing', 
-                afstand: uitlagenData[3] ? uitlagenData[3][etappeCol.col] : 'missing',
-                type: uitlagenData[4] ? uitlagenData[4][etappeCol.col] : 'missing',
-                result: etappeInfo[stageNum]
-            });
         } else if (stageNum === 22) {
             // Eindstand heeft geen specifieke etappe info
             etappeInfo[stageNum].route = 'Algemeen Klassement';
@@ -413,7 +421,6 @@ function processEtappeUitslagen(uitlagenData, etappePunten, eindklassementPunten
     // Sla etappe info op voor homepage gebruik
     window.etappeInfoData = etappeInfo;
     window.etappesWithRiderData = []; // Track which stages have actual rider data
-    console.log('📅 Etappe info parsed:', etappeInfo);
     
     // Bepaal currentStage gebaseerd op etappes met data
     let maxStageWithData = 1;
@@ -439,8 +446,8 @@ function processEtappeUitslagen(uitlagenData, etappePunten, eindklassementPunten
             hasData = dataCount >= 3;
             console.log(`🔍 Eindstand validation: ${dataCount} riders found in column X (${rennersKolom}), rows 1-20, hasData = ${hasData}`);
         } else {
-            // Regular stage data: columns B:V, renner data starts at row 6
-            const riderStartRow = 6;
+            // Regular stage data: columns B:V, renner data starts at Excel row 6 (index 5)
+            const riderStartRow = 5;
             let dataCount = 0;
             for (let row = riderStartRow; row < riderStartRow + 10; row++) {
                 if (uitlagenData[row] && 
@@ -452,7 +459,7 @@ function processEtappeUitslagen(uitlagenData, etappePunten, eindklassementPunten
                 }
             }
             hasData = dataCount >= 3;
-            console.log(`🔍 Stage ${etappeCol.stage} validation: ${dataCount} riders found in column ${etappeCol.col}, rows 6-15, hasData = ${hasData}`);
+            console.log(`🔍 Stage ${etappeCol.stage} validation: ${dataCount} riders found in column ${etappeCol.col}, Excel rows 6-15 (indices 5-14), hasData = ${hasData}`);
         }
         
         console.log(`🔍 Stage ${etappeCol.stage} (${etappeCol.name}): hasData = ${hasData} (dataCount: ${etappeCol.isEindstand ? 'eindstand check' : 'normal check'})`);
@@ -549,10 +556,18 @@ function processEtappeUitslagen(uitlagenData, etappePunten, eindklassementPunten
 
 // Separate function for regular stages (columns B:V, data starts at row 6)
 function processRegularStageData(uitlagenData, etappeInfo, puntenSchema) {
-    console.log(`🏁 Processing REGULAR stage ${etappeInfo.stage} (column ${etappeInfo.col})`);
     
     const stageIndex = etappeInfo.stage - 1;
-    const riderStartRow = 6; // HARD-CODED: rider data starts at row 6 for columns B:V
+    const riderStartRow = 5; // HARD-CODED: rider data starts at Excel row 6 (index 5) for columns B:V
+    
+    // Initialize stage tracking
+    window.stagePointsBreakdown[etappeInfo.stage] = {
+        expectedStagePoints: 122, // 30+15+12+9+8+7+6+5+4+3 = 99 + 23 jersey points = 122
+        actualPointsAllocated: 0,
+        ridersFound: 0,
+        ridersNotFound: [],
+        jerseyPoints: etappeInfo.stage !== 21 ? 23 : 0 // Skip jerseys for stage 21
+    };
     
     // Pre-validation: check if stage has meaningful data
     let validCount = 0;
@@ -593,7 +608,35 @@ function processRegularStageData(uitlagenData, etappeInfo, puntenSchema) {
             const punten = puntenSchema[position] || 0;
             
             validRiders++;
-            console.log(`🏆 Position ${position}: ${rennerNaam} gets ${punten} points (row ${row})`);
+            
+            // Track points for ALL riders - CREATE MISSING RIDERS DYNAMICALLY
+            if (!window.allRidersFromExcel[rennerNaam]) {
+                // Find similar names for debugging
+                const similarNames = window.allRiderNamesFromExcel.filter(name => 
+                    name.toLowerCase().includes(rennerNaam.toLowerCase().split(' ')[0]) ||
+                    rennerNaam.toLowerCase().includes(name.toLowerCase().split(' ')[0])
+                );
+                console.log(`🆕 CREATING MISSING RIDER: "${rennerNaam}" (length: ${rennerNaam.length}) for stage ${etappeInfo.stage}`);
+                if (similarNames.length > 0) {
+                    console.log(`   💡 Similar names in Renners tab: ${similarNames.slice(0, 3).map(n => `"${n}"`).join(', ')}`);
+                }
+                
+                // Create the missing rider dynamically
+                window.allRidersFromExcel[rennerNaam] = {
+                    name: rennerNaam,
+                    team: 'Onbekend', // Unknown team
+                    points: new Array(22).fill(0),
+                    status: 'active',
+                    inTeam: false,
+                    createdDynamically: true
+                };
+                window.allRiderNamesFromExcel.push(rennerNaam);
+            }
+            
+            // Now allocate points (rider is guaranteed to exist)
+            window.allRidersFromExcel[rennerNaam].points[stageIndex] += punten;
+            window.stagePointsBreakdown[etappeInfo.stage].actualPointsAllocated += punten;
+            window.actualPointsAllocated += punten;
             
             // Award points to participants who have this rider
             participants.forEach(participant => {
@@ -601,7 +644,6 @@ function processRegularStageData(uitlagenData, etappeInfo, puntenSchema) {
                 if (rider) {
                     const oldPoints = rider.points[stageIndex];
                     rider.points[stageIndex] += punten;
-                    console.log(`  → ${participant.name}: ${rennerNaam} gets +${punten} points (${oldPoints} → ${rider.points[stageIndex]})`);
                 }
             });
         }
@@ -622,13 +664,31 @@ function processRegularStageData(uitlagenData, etappeInfo, puntenSchema) {
                 if (rennerNaam && rennerNaam.toString().trim() !== '') {
                     const punten = puntenSchema[trui.name] || 0;
                     
+                    // Track points for ALL riders - CREATE MISSING RIDERS DYNAMICALLY
+                    if (!window.allRidersFromExcel[rennerNaam]) {
+                        console.log(`🆕 CREATING MISSING RIDER FOR JERSEY: "${rennerNaam}" for ${trui.name} jersey stage ${etappeInfo.stage}`);
+                        window.allRidersFromExcel[rennerNaam] = {
+                            name: rennerNaam,
+                            team: 'Onbekend',
+                            points: new Array(22).fill(0),
+                            status: 'active',
+                            inTeam: false,
+                            createdDynamically: true
+                        };
+                        window.allRiderNamesFromExcel.push(rennerNaam);
+                    }
+                    
+                    // Allocate jersey points
+                    window.allRidersFromExcel[rennerNaam].points[stageIndex] += punten;
+                    window.stagePointsBreakdown[etappeInfo.stage].actualPointsAllocated += punten;
+                    window.actualPointsAllocated += punten;
+                    
                     // Award jersey points to participants who have this rider
                     participants.forEach(participant => {
                         const rider = participant.team.find(r => r.name === rennerNaam);
                         if (rider) {
                             const oldPoints = rider.points[stageIndex];
                             rider.points[stageIndex] += punten;
-                            console.log(`🏆 ${rennerNaam} (${trui.name} jersey): +${punten} points → ${oldPoints} → ${rider.points[stageIndex]}`);
                         }
                     });
                 }
@@ -644,6 +704,15 @@ function processRegularStageData(uitlagenData, etappeInfo, puntenSchema) {
 // Separate function for eindklassement (columns W:X, data starts at row 2)
 function processEindklassementData(uitlagenData, etappeInfo, eindstandPunten) {
     console.log(`🏆 Processing EINDKLASSEMENT (columns W:X)`);
+    
+    // Calculate expected eindstand points
+    const expectedEindstandPoints = Object.values(eindstandPunten).reduce((sum, points) => sum + points, 0);
+    window.stagePointsBreakdown[22] = {
+        expectedStagePoints: expectedEindstandPoints,
+        actualPointsAllocated: 0,
+        ridersFound: 0,
+        ridersNotFound: []
+    };
     
     // DEBUG: Show first 5 rows of uitlagenData
     console.log('🔍 FIRST 5 ROWS OF UITLAGEN DATA:');
@@ -703,19 +772,34 @@ function processEindklassementData(uitlagenData, etappeInfo, eindstandPunten) {
             const rennerNaam = uitlagenData[row][riderCol].toString().trim();
             const positieCell = uitlagenData[row][positionCol]; // Position from column W
             
-            console.log(`🎯 PROCESSING: Row ${row}, Rider: "${rennerNaam}", Position in Excel: "${positieCell}"`);
-            
             let punten = 0;
             if (row <= 20) {
                 // Top 20 riders - DIRECT position from Excel column W  
                 const position = uitlagenData[row][positionCol]; // Use actual position from Excel
                 punten = eindstandPunten[position] || 0;
-                console.log(`🥇 ${rennerNaam} (row ${row}, Excel pos ${position}): ${punten} points from eindstand table (${eindstandPunten[position]})`);
             } else {
                 // Jersey winners - use exact position string from Excel
                 punten = eindstandPunten[positieCell] || 0;
-                console.log(`🏆 ${rennerNaam} (jersey: ${positieCell}): ${punten} points`);
             }
+            
+            // Track points for ALL riders - CREATE MISSING RIDERS DYNAMICALLY
+            if (!window.allRidersFromExcel[rennerNaam]) {
+                console.log(`🆕 CREATING MISSING RIDER FOR EINDSTAND: "${rennerNaam}" for position ${positieCell}`);
+                window.allRidersFromExcel[rennerNaam] = {
+                    name: rennerNaam,
+                    team: 'Onbekend',
+                    points: new Array(22).fill(0),
+                    status: 'active',
+                    inTeam: false,
+                    createdDynamically: true
+                };
+                window.allRiderNamesFromExcel.push(rennerNaam);
+            }
+            
+            // Allocate eindstand points
+            window.allRidersFromExcel[rennerNaam].points[stageIndex] += punten;
+            window.stagePointsBreakdown[22].actualPointsAllocated += punten;
+            window.actualPointsAllocated += punten;
             
             // Award points to participants who have this rider
             participants.forEach(participant => {
@@ -723,12 +807,6 @@ function processEindklassementData(uitlagenData, etappeInfo, eindstandPunten) {
                 if (rider) {
                     const oldPoints = rider.points[stageIndex];
                     rider.points[stageIndex] += punten;
-                    console.log(`  → ${participant.name}: ${rennerNaam} gets +${punten} points (${oldPoints} → ${rider.points[stageIndex]}) for stage index ${stageIndex}`);
-                    
-                    // Extra debug for Tadej and Jonas
-                    if (rennerNaam === 'Tadej Pogacar' || rennerNaam === 'Jonas Vingegaard') {
-                        console.log(`🚨 CRITICAL: ${rennerNaam} eindstand points: ${punten} (old: ${oldPoints}, new: ${rider.points[stageIndex]}) at stage index ${stageIndex}`);
-                    }
                 }
             });
             

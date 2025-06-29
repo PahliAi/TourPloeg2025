@@ -312,34 +312,33 @@ function calculateAllDailyWins() {
 }
 
 function createAllRidersArray() {
+    // Start met ALLE renners uit Excel Renners tab
     const riderStats = {};
     
+    console.log('🔄 === CREATING ALL RIDERS ARRAY ===');
+    console.log(`📊 Starting with ${window.allRidersFromExcel ? Object.keys(window.allRidersFromExcel).length : 0} riders from Excel`);
+    
+    // Kopieer alle renners uit Excel
+    if (window.allRidersFromExcel) {
+        Object.keys(window.allRidersFromExcel).forEach(riderName => {
+            riderStats[riderName] = {
+                ...window.allRidersFromExcel[riderName],
+                points: [...window.allRidersFromExcel[riderName].points],
+                inTeam: false
+            };
+        });
+    }
+    
+    console.log(`📊 After copying from Excel: ${Object.keys(riderStats).length} riders`);
+    
+    // Update status en team info voor renners die WEL in participant teams zitten
     participants.forEach(participant => {
         participant.team.forEach(rider => {
-            if (!riderStats[rider.name]) {
-                // FIRST TIME seeing this rider - copy his points directly
-                riderStats[rider.name] = {
-                    name: rider.name,
-                    team: rider.team,
-                    points: [...rider.points], // Copy the points array
-                    status: rider.status,
-                    totalPoints: 0
-                };
-                
-                // Debug Marc Soler specifically
-                if (rider.name === 'Marc Soler') {
-                    console.log(`🆕 CREATE RIDERS: ${rider.name} FIRST TIME - points:`, rider.points.slice(0, currentStage));
-                }
-            } else {
-                // SUBSEQUENT TIMES - do NOT add points again (rider already counted)
-                if (rider.name === 'Marc Soler') {
-                    console.log(`⏭️ CREATE RIDERS: ${rider.name} ALREADY EXISTS - skipping points`);
-                }
-                
-                // Only update status if dropped
-                if (rider.status === 'dropped') {
-                    riderStats[rider.name].status = 'dropped';
-                }
+            if (riderStats[rider.name]) {
+                // Update team info en status
+                riderStats[rider.name].inTeam = true;
+                riderStats[rider.name].status = rider.status;
+                // Team blijft zoals het in Excel staat, niet van participant
             }
         });
     });
@@ -349,7 +348,13 @@ function createAllRidersArray() {
         return rider;
     });
     
+    console.log(`📊 Final allRiders array: ${allRiders.length} riders`);
+    console.log(`📊 Total points in system: ${allRiders.reduce((sum, rider) => sum + rider.totalPoints, 0)}`);
+    
+    // Sorteer op punten
     allRiders.sort((a, b) => b.totalPoints - a.totalPoints);
+    
+    console.log('🔄 === ALL RIDERS ARRAY CREATED ===');
 }
 
 function updateTableHeaders() {
@@ -645,32 +650,27 @@ function loadHistorieTab() {
 
 async function loadAvailableYears() {
     try {
-        console.log('📅 Loading available years from tdf-historie.xlsx...');
+        console.log('📅 Scanning for available tdf-*.xlsx files...');
         
-        // Try to load tdf-historie.xlsx
-        const response = await fetch('./tdf-historie.xlsx');
-        if (!response.ok) {
-            throw new Error('Historie bestand niet gevonden');
-        }
-        
-        const arrayBuffer = await response.arrayBuffer();
-        const workbook = XLSX.read(arrayBuffer, {type: 'array'});
+        // Use new scanning function to find tdf-*.xlsx files
+        const availableYears = await window.ExcelPersistence.scanYears();
         
         const yearSelector = document.getElementById('historieYearSelector');
         yearSelector.innerHTML = '<option value="">Kies een jaar...</option>';
         
-        // Add years from available sheets
-        workbook.SheetNames.forEach(sheetName => {
-            // Check if it's a year (4 digits)
-            if (/^\d{4}$/.test(sheetName)) {
-                const option = document.createElement('option');
-                option.value = sheetName;
-                option.textContent = sheetName;
-                yearSelector.appendChild(option);
-            }
+        // Add years from found files
+        availableYears.forEach(year => {
+            const option = document.createElement('option');
+            option.value = year;
+            option.textContent = `${year}`;
+            yearSelector.appendChild(option);
         });
         
-        console.log('✅ Years loaded:', workbook.SheetNames);
+        console.log('✅ Historic years loaded:', availableYears);
+        
+        if (availableYears.length === 0) {
+            yearSelector.innerHTML = '<option value="">Geen historie beschikbaar</option>';
+        }
         
     } catch (error) {
         console.error('❌ Error loading available years:', error);
@@ -704,40 +704,15 @@ async function loadHistorieYear(year) {
             };
         }
         
-        // Load historic Excel file completely - same structure as current
-        const response = await fetch('./tdf-historie.xlsx');
-        if (!response.ok) {
-            throw new Error('Historie Excel niet gevonden');
+        // Use new loadHistoricData function to load tdf-${year}.xlsx
+        const historicLoaded = await window.ExcelPersistence.loadHistoric(year);
+        if (!historicLoaded) {
+            throw new Error(`Bestand tdf-${year}.xlsx niet gevonden`);
         }
         
-        const arrayBuffer = await response.arrayBuffer();
-        const workbook = XLSX.read(arrayBuffer, {type: 'array'});
+        console.log(`📊 Historie year ${year} loaded successfully`);
         
-        console.log(`📊 Historie Excel loaded, tabs:`, workbook.SheetNames);
-        
-        // Check if the requested year tab exists
-        if (!workbook.SheetNames.includes(year)) {
-            throw new Error(`Tab "${year}" niet gevonden in historie bestand`);
-        }
-        
-        // Process the ENTIRE historie workbook using existing parseExcelData
-        // Just replace the uitslagen tab name from 'Huidig' to the year
-        const originalSheets = {...workbook.Sheets};
-        
-        // Rename the year tab to 'Huidig' so existing logic works
-        if (workbook.Sheets[year]) {
-            workbook.Sheets['Huidig'] = workbook.Sheets[year];
-            workbook.SheetNames = workbook.SheetNames.map(name => name === year ? 'Huidig' : name);
-        }
-        
-        console.log(`📊 Processing complete historie workbook for ${year}`);
-        
-        // Use existing parseExcelData function with the complete workbook
-        parseExcelData(workbook);
-        
-        const loaded = true;
-        
-        if (loaded) {
+        if (historicLoaded) {
             // Switch to historie mode
             historieMode = true;
             currentHistorieYear = year;

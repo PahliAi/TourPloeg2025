@@ -76,7 +76,7 @@ function loadRidersTable() {
             <td class="${statusClass}">${rider.name}</td>
             <td class="points-cell ${statusClass}"><strong>${rider.totalPoints}</strong></td>
             ${stagePointsHtml}
-            <td class="${statusClass}">${rider.status === 'dropped' ? '❌ Uitgevallen' : '✅ Actief'}</td>
+            <td class="${statusClass}">${rider.status === 'dropped' ? '<span style="color: #888;">✓ Uitgevallen</span>' : '✅ Actief'}</td>
         `;
         tbody.appendChild(row);
     });
@@ -397,7 +397,7 @@ function showParticipantDetail(participantName) {
                 <td class="${statusClass}">${rider.team || '-'}</td>
                 <td class="points-cell ${statusClass}"><strong>${totalPoints}</strong></td>
                 ${stagePointsHtml}
-                <td class="${statusClass}">${rider.status === 'dropped' ? '❌ Uitgevallen' : '✅ Actief'}</td>
+                <td class="${statusClass}">${rider.status === 'dropped' ? '<span style="color: #888;">✓ Uitgevallen</span>' : '✅ Actief'}</td>
             </tr>
         `;
     });
