@@ -60,7 +60,15 @@ function loadRidersTable() {
         
         let stagePointsHtml = '';
         for (let i = 0; i < currentStage; i++) {
-            stagePointsHtml += `<td class="points-cell ${statusClass}">${rider.points[i] || 0}</td>`;
+            if (i < 21) { // Alleen etappes 1-21
+                stagePointsHtml += `<td class="points-cell ${statusClass}">${rider.points[i] || 0}</td>`;
+            }
+        }
+        
+        // Voeg Eindstand kolom toe als er data is
+        if (window.hasEindstandData) {
+            const eindstandPoints = rider.points[21] || 0; // Index 21 = etappe 22 (Eindstand)
+            stagePointsHtml += `<td class="points-cell ${statusClass}" style="background: #ffe4b5; font-weight: bold;">${eindstandPoints}</td>`;
         }
         
         row.innerHTML = `
@@ -180,30 +188,54 @@ function loadDailyPrizesTable() {
     participants.forEach((participant, index) => {
         const row = document.createElement('tr');
         
+        // Tel blauwe en gele truien voor deze participant
+        let blueJerseys = 0;
+        let yellowJerseys = 0;
+        
         let stagePointsHtml = '';
         for (let i = 0; i < currentStage; i++) {
-            const points = participant.stagePoints[i] || 0;
-            const isWinner = dailyWinners[i] === participant.name && points > 0;
-            const isLeader = generalLeaders[i] === participant.name && points > 0;
-            
-            let displayText = points.toString();
-            if (isWinner && isLeader) {
-                displayText += ' 🔵🟡';
-            } else if (isWinner) {
-                displayText += ' 🔵';
-            } else if (isLeader) {
-                displayText += ' 🟡';
+            if (i < 21) { // Alleen etappes 1-21
+                const points = participant.stagePoints[i] || 0;
+                const isWinner = dailyWinners[i] === participant.name && points > 0;
+                const isLeader = generalLeaders[i] === participant.name && points > 0;
+                
+                if (isWinner) blueJerseys++;
+                if (isLeader) yellowJerseys++;
+                
+                let displayText = points.toString();
+                if (isWinner && isLeader) {
+                    displayText += ' 🔵🟡';
+                } else if (isWinner) {
+                    displayText += ' 🔵';
+                } else if (isLeader) {
+                    displayText += ' 🟡';
+                }
+                
+                stagePointsHtml += `<td class="points-cell">${displayText}</td>`;
             }
-            
-            stagePointsHtml += `<td class="points-cell">${displayText}</td>`;
         }
+        
+        // Voeg Eindstand kolom toe als er data is
+        if (window.hasEindstandData) {
+            const eindstandPoints = participant.stagePoints[21] || 0; // Index 21 = etappe 22 (Eindstand)
+            stagePointsHtml += `<td class="points-cell" style="background: #ffe4b5; font-weight: bold;">${eindstandPoints}</td>`;
+        }
+        
+        // Maak truien tekst
+        let truienText = '';
+        if (blueJerseys > 0) truienText += `${blueJerseys}🔵`;
+        if (yellowJerseys > 0) {
+            if (truienText) truienText += ' ';
+            truienText += `${yellowJerseys}🟡`;
+        }
+        if (!truienText) truienText = '0';
         
         row.innerHTML = `
             <td><strong>${index + 1}</strong></td>
             <td>${participant.name}</td>
             <td class="points-cell"><strong>${participant.totalPoints}</strong></td>
             ${stagePointsHtml}
-            <td class="points-cell dagoverwinningen-column">${participant.dailyWins}</td>
+            <td class="points-cell dagoverwinningen-column">${truienText}</td>
         `;
         tbody.appendChild(row);
     });
@@ -380,202 +412,4 @@ function closeDetailView() {
     document.getElementById('detailView').style.display = 'none';
 }
 
-// Excel View Functions
-function showExcelTab(tabName) {
-    // Remove active class from all tab buttons
-    document.querySelectorAll('.excel-tab-btn').forEach(btn => {
-        btn.classList.remove('active');
-    });
-    
-    // Remove active class from all tab contents
-    document.querySelectorAll('.excel-tab-content').forEach(content => {
-        content.classList.remove('active');
-    });
-    
-    // Add active class to clicked button and corresponding content
-    event.target.classList.add('active');
-    document.getElementById(`excel-${tabName}`).classList.add('active');
-    
-    // Load appropriate Excel view
-    if (tabName === 'hoofdprijs') {
-        loadHoofdprijsExcelView();
-    } else if (tabName === 'matrix') {
-        loadMatrixExcelView();
-    }
-}
-
-function loadHoofdprijsExcelView() {
-    const container = document.getElementById('hoofdprijsGrid');
-    
-    if (participants.length === 0) {
-        container.innerHTML = '<div style="padding: 40px; text-align: center; color: #666;">Upload eerst Excel data om de hoofdprijs weergave te zien</div>';
-        return;
-    }
-    
-    // Sort participants by total points for ranking
-    const sortedParticipants = [...participants].sort((a, b) => b.totalPoints - a.totalPoints);
-    
-    // Calculate daily winners and general classification leaders for each stage
-    const dailyWinners = [];
-    const generalLeaders = [];
-    
-    for (let stage = 0; stage < currentStage; stage++) {
-        // Daily winners (can be multiple with same score)
-        let maxStagePoints = Math.max(...participants.map(p => p.stagePoints[stage] || 0));
-        dailyWinners[stage] = participants.filter(p => (p.stagePoints[stage] || 0) === maxStagePoints && maxStagePoints > 0);
-        
-        // General classification leaders up to this stage (can be multiple with same total)
-        let maxTotalPoints = 0;
-        participants.forEach(p => {
-            const totalUpToStage = p.stagePoints.slice(0, stage + 1).reduce((sum, pts) => sum + pts, 0);
-            if (totalUpToStage > maxTotalPoints) {
-                maxTotalPoints = totalUpToStage;
-            }
-        });
-        
-        generalLeaders[stage] = participants.filter(p => {
-            const totalUpToStage = p.stagePoints.slice(0, stage + 1).reduce((sum, pts) => sum + pts, 0);
-            return totalUpToStage === maxTotalPoints && maxTotalPoints > 0;
-        });
-    }
-    
-    // Create Excel-like table structure
-    let html = '<table style="border-collapse: collapse; width: 100%; font-size: 9px;">';
-    
-    // Header row 1: Stage numbers
-    html += '<tr>';
-    html += '<td class="excel-cell excel-header-cell" rowspan="2" style="min-width: 30px;">Rang</td>';
-    html += '<td class="excel-cell excel-header-cell" rowspan="2" style="min-width: 120px;">Deelnemer</td>';
-    
-    // Stage headers (3 columns per stage)
-    for (let stage = 1; stage <= currentStage; stage++) {
-        html += `<td class="excel-cell excel-header-cell" colspan="3" style="font-size: 8px;">Etappe ${stage}</td>`;
-    }
-    
-    // Total columns
-    html += '<td class="excel-cell excel-header-cell" rowspan="2" style="min-width: 40px;">Totaal</td>';
-    html += '<td class="excel-cell excel-header-cell" rowspan="2" style="min-width: 40px;">Rang</td>';
-    html += '<td class="excel-cell excel-header-cell" rowspan="2" style="min-width: 30px;">🔵</td>';
-    html += '<td class="excel-cell excel-header-cell" rowspan="2" style="min-width: 30px;">🟡</td>';
-    html += '</tr>';
-    
-    // Header row 2: Column types (Punten, Blauw, Geel)
-    html += '<tr>';
-    for (let stage = 1; stage <= currentStage; stage++) {
-        html += '<td class="excel-cell excel-header-cell" style="font-size: 7px;">Pnt</td>';
-        html += '<td class="excel-cell excel-header-cell" style="font-size: 7px;">🔵</td>';
-        html += '<td class="excel-cell excel-header-cell" style="font-size: 7px;">🟡</td>';
-    }
-    html += '</tr>';
-    
-    // Participant rows
-    sortedParticipants.forEach((participant, index) => {
-        html += '<tr class="excel-rider-row">';
-        
-        // Ranking and name
-        html += `<td class="excel-cell">${index + 1}</td>`;
-        html += `<td class="excel-cell excel-name-cell">${participant.name}</td>`;
-        
-        // Stage data (3 columns per stage)
-        let totalBlueJerseys = 0;
-        let totalYellowJerseys = 0;
-        
-        for (let stage = 0; stage < currentStage; stage++) {
-            const stagePoints = participant.stagePoints[stage] || 0;
-            
-            // Points column
-            html += `<td class="excel-cell excel-points-cell">${stagePoints}</td>`;
-            
-            // Blue jersey column (daily winner)
-            const isDailyWinner = dailyWinners[stage] && dailyWinners[stage].some(p => p.name === participant.name);
-            if (isDailyWinner) {
-                html += '<td class="excel-cell">🔵</td>';
-                totalBlueJerseys++;
-            } else {
-                html += '<td class="excel-cell"></td>';
-            }
-            
-            // Yellow jersey column (general classification leader)
-            const isGeneralLeader = generalLeaders[stage] && generalLeaders[stage].some(p => p.name === participant.name);
-            if (isGeneralLeader) {
-                html += '<td class="excel-cell">🟡</td>';
-                totalYellowJerseys++;
-            } else {
-                html += '<td class="excel-cell"></td>';
-            }
-        }
-        
-        // Total columns
-        html += `<td class="excel-cell excel-points-cell"><strong>${participant.totalPoints}</strong></td>`;
-        html += `<td class="excel-cell"><strong>${index + 1}</strong></td>`;
-        html += `<td class="excel-cell">${totalBlueJerseys}</td>`;
-        html += `<td class="excel-cell">${totalYellowJerseys}</td>`;
-        
-        html += '</tr>';
-    });
-    
-    html += '</table>';
-    container.innerHTML = html;
-}
-
-function loadMatrixExcelView() {
-    const container = document.getElementById('matrixGrid');
-    
-    if (participants.length === 0) {
-        container.innerHTML = '<div style="padding: 40px; text-align: center; color: #666;">Upload eerst Excel data om de matrix weergave te zien</div>';
-        return;
-    }
-    
-    // Create rider statistics
-    const riderStats = {};
-    participants.forEach(participant => {
-        participant.team.forEach(rider => {
-            if (!riderStats[rider.name]) {
-                riderStats[rider.name] = {
-                    name: rider.name,
-                    selectedBy: [],
-                    totalSelections: 0
-                };
-            }
-            riderStats[rider.name].selectedBy.push(participant.name);
-            riderStats[rider.name].totalSelections++;
-        });
-    });
-    
-    const riders = Object.values(riderStats).sort((a, b) => b.totalSelections - a.totalSelections);
-    
-    // Create Excel-like table
-    let html = '<table style="border-collapse: collapse; width: 100%; font-size: 10px;">';
-    
-    // Header row
-    html += '<tr>';
-    html += '<td class="excel-cell excel-header-cell excel-name-cell">Renner</td>';
-    html += '<td class="excel-cell excel-header-cell" style="min-width: 40px;">Totaal</td>';
-    
-    participants.forEach(participant => {
-        html += `<td class="excel-cell excel-header-cell" style="min-width: 25px; height: 140px; font-size: 8px; writing-mode: vertical-lr; text-orientation: mixed; vertical-align: top; padding: 15px 4px;" title="${participant.name}">${participant.name}</td>`;
-    });
-    
-    html += '</tr>';
-    
-    // Rider rows
-    riders.forEach(rider => {
-        html += '<tr class="excel-rider-row">';
-        html += `<td class="excel-cell excel-name-cell">${rider.name}</td>`;
-        html += `<td class="excel-cell excel-points-cell">${rider.totalSelections}</td>`;
-        
-        participants.forEach(participant => {
-            const isSelected = rider.selectedBy.includes(participant.name);
-            if (isSelected) {
-                html += '<td class="excel-cell">🟢</td>';
-            } else {
-                html += '<td class="excel-cell" style="background: #f5f5f5;"></td>';
-            }
-        });
-        
-        html += '</tr>';
-    });
-    
-    html += '</table>';
-    container.innerHTML = html;
-}
+// Excel View functies verwijderd

@@ -27,11 +27,19 @@ This is a Tour de France betting pool website - a single-page application built 
 - Participants: Each has a name, 12 selected riders, total points, and daily wins
 - Riders: Track points per stage, team affiliation, and dropout status
 - Stages: Process top-10 results, jersey holders, and story content
+- Eindstand: Final classification with separate point system (rows 2-30 in Excel)
 
 **Scoring System**:
 - Stage results: 30, 15, 12, 9, 8, 7, 6, 5, 4, 3 points for top 10
 - Jersey bonuses: Yellow (10), Green/Polka (5), White (3)
 - Daily wins calculated per stage for highest-scoring participant
+- Final classification: Uses "Eindklassement punten" tab with positions 1-20 + jersey winners
+
+**Excel Structure for Eindstand**:
+- Column with "Eind" header: Contains positions (1, 2, 3, ..., groen 1, groen 2, etc.)
+- Next column "Uitslag": Contains rider names (Tadej Pogacar, Jonas Vingegaard, etc.)
+- Rows 2-21: Top 20 riders in final classification
+- Rows 22-30: Jersey winners (groen 1-3, bolletjes 1-3, wit 1-3)
 
 ## Development Workflow
 

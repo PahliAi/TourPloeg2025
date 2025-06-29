@@ -1,6 +1,7 @@
 # Referentie bestanden - niet nodig voor GitHub
 *.jpg
 *.vb
+*.csv
 CLAUDE.md
 tour-poule-website.html
 

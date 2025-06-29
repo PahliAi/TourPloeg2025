@@ -13,14 +13,20 @@
 </head>
 <body>
     <div class="header">
-        <h1>🚴‍♂️ Tour de France Poule 2024</h1>
+        <div id="historicIndicator" style="display: none; text-align: center; padding: 10px; background: rgba(139, 69, 19, 0.8); margin-bottom: 10px;">
+            <img id="historicBike" src="" alt="Historic" style="height: 40px; vertical-align: middle; margin-right: 10px;">
+            <span style="color: white; font-weight: bold; font-size: 1.1em;">📚 HISTORISCHE DATA</span>
+        </div>
+        
+        <h1 id="mainTitle">🚴‍♂️ Tour de France Poule 2025</h1>
+        
         <div class="nav-tabs">
             <button class="nav-tab active" onclick="showTab('home')">🏠 Home</button>
             <button class="nav-tab" onclick="showTab('participants')">👥 Deelnemers Score</button>
             <button class="nav-tab" onclick="showTab('riders')">🚴 Renners Score</button>
             <button class="nav-tab" onclick="showTab('matrix')">📊 Renners Gekozen</button>
             <button class="nav-tab" onclick="showTab('daily-prizes')">🏆 Dagprijzen</button>
-            <button class="nav-tab" onclick="showTab('excel-view')">📊 Excel View</button>
+            <button class="nav-tab" onclick="showTab('historie')">📚 Historie</button>
             <button class="nav-tab" onclick="showTab('upload')">📊 Upload</button>
         </div>
     </div>
@@ -210,34 +216,34 @@
             </div>
         </div>
 
-        <!-- EXCEL VIEW TAB -->
-        <div id="excel-view" class="tab-content">
+        <!-- HISTORIE TAB -->
+        <div id="historie" class="tab-content">
             <div class="card">
+                <h2>📚 Tour de France Historie</h2>
                 
-                <!-- Excel Tab Buttons -->
-                <div style="margin: 20px 0;">
-                    <button class="btn excel-tab-btn active" onclick="showExcelTab('hoofdprijs')">📊 Hoofdprijs</button>
-                    <button class="btn excel-tab-btn" onclick="showExcelTab('matrix')">🔗 Renners Matrix</button>
-                </div>
-                
-                <!-- Hoofdprijs Excel View -->
-                <div id="excel-hoofdprijs" class="excel-tab-content active">
-                    <div style="background: white; border: 1px solid #ccc; border-radius: 8px; overflow: hidden;">
+                <div style="text-align: center; margin: 30px 0;">
+                    <div style="background: linear-gradient(135deg, #8B4513, #A0522D); padding: 30px; border-radius: 20px; color: white;">
+                        <img id="historicBikeDisplay" src="" alt="Historic Bike" style="height: 80px; margin-bottom: 20px;">
+                        <h3>🕰️ Reis Terug in de Tijd</h3>
+                        <p style="margin: 20px 0;">Bekijk de resultaten van voorgaande Tour de France seizoenen</p>
                         
-                        <!-- Excel-like Grid -->
-                        <div id="hoofdprijsGrid" class="excel-grid">
-                            <!-- Will be filled by JavaScript -->
+                        <div style="margin: 30px 0;">
+                            <label for="historieYearSelector" style="display: block; margin-bottom: 10px; font-weight: bold;">Selecteer Jaar:</label>
+                            <select id="historieYearSelector" onchange="loadHistorieYear(this.value)" style="padding: 15px 25px; border-radius: 25px; border: none; font-size: 1.1em; font-weight: bold; min-width: 150px; margin: 0 10px;">
+                                <option value="">Kies een jaar...</option>
+                            </select>
                         </div>
+                        
+                        <button class="btn" onclick="returnToCurrentYear()" style="background: linear-gradient(135deg, #28a745, #20c997); margin-top: 20px;">
+                            🔙 Terug naar Huidig Jaar
+                        </button>
                     </div>
                 </div>
                 
-                <!-- Matrix Excel View -->
-                <div id="excel-matrix" class="excel-tab-content">
-                    <div style="background: white; border: 1px solid #ccc; border-radius: 8px; overflow: hidden;">
-                        
-                        <div id="matrixGrid" class="excel-grid">
-                            <!-- Will be filled by JavaScript -->
-                        </div>
+                <div id="historieStatus" style="text-align: center; margin: 20px 0; display: none;">
+                    <div class="card" style="background: rgba(255,255,255,0.9);">
+                        <h3 id="historieStatusTitle">📊 Historie wordt geladen...</h3>
+                        <p id="historieStatusText">Even geduld alstublieft...</p>
                     </div>
                 </div>
             </div>

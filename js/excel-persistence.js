@@ -70,7 +70,11 @@ async function loadSavedExcel() {
 // Check for Excel file in GitHub repository
 async function checkForGitHubExcel() {
     try {
-        // Try different possible locations for the Excel file
+        // Detect year from URL path (e.g., /2024/, /2023/)
+        const currentYear = detectYearFromUrl();
+        console.log('🗓️ Detected year:', currentYear);
+        
+        // Only load current year data - no year-specific files
         const possiblePaths = [
             'tdf-current.xlsx',
             'data/tdf-current.xlsx'
@@ -84,9 +88,9 @@ async function checkForGitHubExcel() {
             const repoName = currentUrl.split('/')[3] || 'Tourploeg';
             repoUrl = `https://raw.githubusercontent.com/${parts}/${repoName}/main/`;
         } else {
-            // Fallback - will need manual configuration
-            console.log('💡 For GitHub auto-loading, deploy to GitHub Pages');
-            return false;
+            // Local testing fallback - try relative path
+            console.log('🏠 Local testing detected - trying relative path');
+            repoUrl = './';
         }
         
         for (const path of possiblePaths) {
@@ -151,15 +155,48 @@ function handleExcelFileWithAutoSave(event) {
 async function initializeExcelPersistence() {
     console.log('🔄 Initializing Excel persistence...');
     
-    // First, try to load from GitHub
+    // ALWAYS start with complete fresh reset
+    console.log('🧹 Complete fresh start - clearing all data...');
+    participants = [];
+    allRiders = [];
+    currentStage = 1;
+    window.etappeInfoData = null;
+    window.hasEindstandData = false;
+    
+    // Clear ALL localStorage completely
+    try {
+        // Excel-related cache
+        localStorage.removeItem('temp-excel-data');
+        localStorage.removeItem('cached-participants');
+        localStorage.removeItem('cached-riders');
+        localStorage.removeItem('cached-stage');
+        localStorage.removeItem('excel-file-backup');
+        localStorage.removeItem('excel-file-name');
+        localStorage.removeItem('excel-file-date');
+        
+        // Export-related cache
+        localStorage.removeItem('export-data');
+        localStorage.removeItem('last-export');
+        localStorage.removeItem('tourploeg-data');
+        localStorage.removeItem('participants-backup');
+        localStorage.removeItem('allRiders-backup');
+        
+        // Browser cache busting
+        localStorage.removeItem('app-cache');
+        localStorage.removeItem('data-cache');
+        localStorage.removeItem('stage-cache');
+        
+        console.log('🗑️ Persistence: ALL cache cleared');
+    } catch(e) {
+        console.log('⚠️ Could not clear localStorage:', e);
+    }
+    
+    // Try to auto-load tdf-current.xlsx from GitHub
+    console.log('🔍 Checking for tdf-current.xlsx...');
     const githubLoaded = await checkForGitHubExcel();
     
     if (!githubLoaded) {
-        // Fallback to localStorage
-        const localLoaded = await loadSavedExcel();
-        if (!localLoaded) {
-            console.log('🆕 No saved Excel file found - awaiting upload');
-        }
+        console.log('📭 No tdf-current.xlsx found - manual upload required');
     }
     
     // Set up enhanced file input handler
@@ -174,9 +211,216 @@ async function initializeExcelPersistence() {
     console.log('✅ Excel persistence initialized');
 }
 
+// Year detection and multi-year support
+function detectYearFromUrl() {
+    const path = window.location.pathname;
+    const yearMatch = path.match(/\/(\d{4})\//);
+    return yearMatch ? yearMatch[1] : new Date().getFullYear().toString();
+}
+
+// Load historic data from tdf-historie.xlsx
+async function loadHistoricData(year) {
+    try {
+        console.log(`📚 Loading historic data for year ${year}...`);
+        
+        // Try to load tdf-historie.xlsx
+        const possiblePaths = [
+            'tdf-historie.xlsx',
+            'data/tdf-historie.xlsx'
+        ];
+        
+        // Auto-detect repository info from current URL
+        let repoUrl = '';
+        const currentUrl = window.location.href;
+        if (currentUrl.includes('github.io')) {
+            const parts = currentUrl.split('.github.io')[0].split('//')[1];
+            const repoName = currentUrl.split('/')[3] || 'Tourploeg';
+            repoUrl = `https://raw.githubusercontent.com/${parts}/${repoName}/main/`;
+        } else {
+            // Local testing - try relative path
+            repoUrl = './';
+        }
+        
+        for (const path of possiblePaths) {
+            try {
+                const response = await fetch(repoUrl + path);
+                if (response.ok) {
+                    console.log(`📊 Found historie file at: ${path}`);
+                    
+                    const arrayBuffer = await response.arrayBuffer();
+                    const workbook = XLSX.read(arrayBuffer, {type: 'array'});
+                    
+                    // Look for year-specific sheet
+                    const yearSheet = workbook.Sheets[year];
+                    if (yearSheet) {
+                        console.log(`✅ Found data for year ${year}`);
+                        
+                        // Convert to same format as current Excel
+                        const historicData = XLSX.utils.sheet_to_json(yearSheet, {header: 1});
+                        
+                        // Show loading message
+                        const loadingMsg = document.createElement('div');
+                        loadingMsg.style.cssText = 'position: fixed; top: 20px; right: 20px; background: rgba(40, 167, 69, 0.9); color: white; padding: 15px; border-radius: 8px; z-index: 9999;';
+                        loadingMsg.innerHTML = `🕰️ Loading historic data: ${year}`;
+                        document.body.appendChild(loadingMsg);
+                        
+                        // Process historic data (simplified structure)
+                        processHistoricData(historicData, year);
+                        
+                        setTimeout(() => loadingMsg.remove(), 3000);
+                        return true;
+                    }
+                }
+            } catch (error) {
+                continue; // Try next path
+            }
+        }
+        
+        console.log(`📭 No historic data found for year ${year}`);
+        return false;
+        
+    } catch (error) {
+        console.log('⚠️ Could not load historic data:', error.message);
+        return false;
+    }
+}
+
+// Process historic data using the same structure as current Excel
+function processHistoricData(data, year) {
+    console.log(`🏆 Processing historic data for ${year}:`, data);
+    
+    // Update page title to show year
+    const headerTitle = document.querySelector('.header h1');
+    if (headerTitle) {
+        headerTitle.textContent = `🚴‍♂️ Tour de France Poule ${year}`;
+    }
+    
+    // Parse historic data assuming same structure as current Excel with sheets:
+    // Row structure: Deelnemers, Renners, Etappe uitslagen etc.
+    try {
+        // The data is already in array format from the year tab
+        // We need to simulate the multi-sheet structure for processExcelData
+        
+        // Extract sections from the single sheet:
+        // Assume structure: Deelnemers (rows 1-13), Renners (rows 15+), Etappe uitslagen (separate section)
+        
+        const deelnemersData = [];
+        const rennersData = [];
+        const uitlagenData = [];
+        
+        // Find section headers to split the data
+        let currentSection = 'unknown';
+        let deelnemersStart = -1;
+        let rennersStart = -1;
+        let uitlagenStart = -1;
+        
+        for (let i = 0; i < data.length; i++) {
+            const firstCell = data[i] && data[i][0] ? data[i][0].toString().toLowerCase() : '';
+            
+            if (firstCell.includes('deelnemer') || firstCell.includes('naam')) {
+                deelnemersStart = i;
+                currentSection = 'deelnemers';
+            } else if (firstCell.includes('renner') && !firstCell.includes('deelnemer')) {
+                rennersStart = i;
+                currentSection = 'renners';
+            } else if (firstCell.includes('uitslag') || firstCell.includes('etappe') || firstCell === 'positie') {
+                uitlagenStart = i;
+                currentSection = 'uitslagen';
+            }
+        }
+        
+        // Extract deelnemers data (typically first 13 rows after header)
+        if (deelnemersStart >= 0) {
+            for (let i = deelnemersStart; i < Math.min(data.length, deelnemersStart + 15); i++) {
+                if (data[i]) deelnemersData.push(data[i]);
+            }
+        }
+        
+        // Extract uitslagen data (large section)
+        if (uitlagenStart >= 0) {
+            for (let i = uitlagenStart; i < data.length; i++) {
+                if (data[i]) uitlagenData.push(data[i]);
+            }
+        }
+        
+        console.log(`📊 Historic data sections found:`, {
+            deelnemers: deelnemersData.length,
+            uitslagen: uitlagenData.length
+        });
+        
+        // Process using existing Excel processing logic
+        if (deelnemersData.length > 0 && uitlagenData.length > 0) {
+            processExcelData(rennersData, deelnemersData, uitlagenData, null, null);
+            
+            // Hide upload tab for historic data
+            const uploadTab = document.querySelector('[onclick="showTab(\'upload\')"]');
+            if (uploadTab) {
+                uploadTab.style.display = 'none';
+            }
+            
+            // Show historic notice instead of getting started
+            const gettingStarted = document.getElementById('gettingStarted');
+            if (gettingStarted) {
+                gettingStarted.innerHTML = `
+                    <h2>📚 Historische Data - ${year}</h2>
+                    <p style="font-size: 1.1em; margin: 20px 0;">Je bekijkt de eindresultaten van Tour de France ${year}</p>
+                    <div style="text-align: center; margin: 30px 0;">
+                        <div style="background: rgba(255,255,255,0.2); padding: 20px; border-radius: 10px; max-width: 400px; margin: 0 auto;">
+                            <h3>🏆 ${year} Eindstand</h3>
+                            <p>Alle resultaten en statistieken<br>van het ${year} seizoen</p>
+                            <a href="../" class="btn" style="margin-top: 10px; text-decoration: none; display: inline-block;">🔙 Terug naar Huidig Jaar</a>
+                        </div>
+                    </div>
+                `;
+                gettingStarted.style.display = 'block';
+            }
+        } else {
+            throw new Error('Incomplete historic data structure');
+        }
+        
+    } catch (error) {
+        console.error('❌ Error processing historic data:', error);
+        
+        // Fallback: show basic historic notice
+        const gettingStarted = document.getElementById('gettingStarted');
+        if (gettingStarted) {
+            gettingStarted.innerHTML = `
+                <h2>📚 Historische Data - ${year}</h2>
+                <p style="color: #ff6b35;">Data structuur niet ondersteund voor jaar ${year}</p>
+                <div style="text-align: center; margin: 30px 0;">
+                    <a href="../" class="btn">🔙 Terug naar Huidig Jaar</a>
+                </div>
+            `;
+            gettingStarted.style.display = 'block';
+        }
+    }
+}
+
+// Enhanced initialization with year detection
+async function initializeMultiYearExcelPersistence() {
+    console.log('🔄 Initializing multi-year Excel persistence...');
+    
+    const currentYear = detectYearFromUrl();
+    
+    if (currentYear !== new Date().getFullYear().toString()) {
+        // Historic year - try to load from historie file
+        const historicLoaded = await loadHistoricData(currentYear);
+        if (historicLoaded) {
+            console.log(`✅ Historic data loaded for ${currentYear}`);
+            return;
+        }
+    }
+    
+    // Current year or fallback - use normal initialization
+    await initializeExcelPersistence();
+}
+
 // Export functions for global access
 window.ExcelPersistence = {
     load: loadSavedExcel,
     checkGitHub: checkForGitHubExcel,
-    initialize: initializeExcelPersistence
+    initialize: initializeExcelPersistence,
+    initializeMultiYear: initializeMultiYearExcelPersistence,
+    loadHistoric: loadHistoricData,
+    detectYear: detectYearFromUrl
 };

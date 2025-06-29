@@ -37,9 +37,8 @@ function showTab(tabName) {
         case 'daily-prizes':
             loadDailyPrizesTable();
             break;
-        case 'excel-view':
-            loadHoofdprijsExcelView();
-            loadMatrixExcelView();
+        case 'historie':
+            loadHistorieTab();
             break;
         case 'upload':
             // Upload tab - no special loading needed
@@ -63,7 +62,7 @@ function processTeamData(teamData) {
                     team.push({
                         name: riderName,
                         team: teamName,
-                        points: Array(21).fill(0), // 21 stages max
+                        points: Array(22).fill(0), // 22 stages max (21 etappes + eindstand)
                         status: "active"
                     });
                 }
@@ -73,7 +72,7 @@ function processTeamData(teamData) {
                 name: deelnemer.Naam,
                 totalPoints: 0,
                 dailyWins: 0,
-                stagePoints: Array(21).fill(0),
+                stagePoints: Array(22).fill(0), // 22 stages max (21 etappes + eindstand)
                 team: team
             });
         });
@@ -81,6 +80,11 @@ function processTeamData(teamData) {
         createAllRidersArray();
         loadParticipantsTable();
         updatePodiums();
+        
+        // Trigger podium animation when new data is loaded
+        setTimeout(() => {
+            triggerPodiumAnimation();
+        }, 500);
         
         console.log(`✅ Processed ${participants.length} participants`);
     }
@@ -110,6 +114,11 @@ function processStageData(stageData) {
     loadParticipantsTable();
     updatePodiums();
     updateTableHeaders();
+    
+    // Trigger podium animation when stage data is updated
+    setTimeout(() => {
+        triggerPodiumAnimation();
+    }, 500);
 }
 
 function updateStageInfo(stageData) {
@@ -129,6 +138,75 @@ function updateStageInfo(stageData) {
     }
     
     document.getElementById('dailyPodiumTitle').textContent = `🔵 Dagpodium - Etappe ${stageData.stage}`;
+}
+
+// Nieuwe functie om etappe info van Excel data te tonen
+function updateStageInfoFromExcel() {
+    if (!window.etappeInfoData || !currentStage) {
+        return;
+    }
+    
+    const etappeInfo = window.etappeInfoData;
+    
+    // Smart homepage logic:
+    // - "Vandaag" = laatste etappe met renner data
+    // - "Morgen" = volgende etappe (die mogelijk nog geen data heeft)
+    
+    const etappesWithData = window.etappesWithRiderData || [];
+    const laatsteVoltooideEtappe = Math.max(...etappesWithData); // Highest stage with actual rider data
+    const volgendeEtappe = laatsteVoltooideEtappe < 21 ? laatsteVoltooideEtappe + 1 : null;
+    
+    console.log(`🏠 Homepage logic: laatste voltooide = ${laatsteVoltooideEtappe}, volgende = ${volgendeEtappe}`);
+    console.log(`🏠 currentStage = ${currentStage}, etappeInfo keys:`, Object.keys(etappeInfo));
+    console.log(`🏠 etappesWithRiderData:`, window.etappesWithRiderData);
+    
+    // Update "Vandaag" section - laatste voltooide etappe
+    if (laatsteVoltooideEtappe && etappeInfo[laatsteVoltooideEtappe]) {
+        const info = etappeInfo[laatsteVoltooideEtappe];
+        const stageLabel = laatsteVoltooideEtappe === 22 ? 'Eindstand' : `Etappe ${laatsteVoltooideEtappe}`;
+        
+        console.log(`🏁 Setting "Vandaag" to: ${stageLabel}`, info);
+        
+        document.getElementById('currentStageTitle').textContent = `🗓️ Vandaag - ${stageLabel}`;
+        document.getElementById('currentStageName').innerHTML = `<strong>${info.route || 'Route onbekend'}</strong>`;
+        document.getElementById('currentStageDetails').textContent = `${info.afstand || '-'} | ${info.type || '-'}`;
+        document.getElementById('currentStageDescription').textContent = info.datum ? `Datum: ${info.datum}` : '';
+        document.getElementById('stageInfoContainer').style.display = 'grid';
+    } else {
+        console.log(`❌ No data for laatste voltooide etappe ${laatsteVoltooideEtappe}`);
+    }
+    
+    // Update "Morgen" section - volgende etappe preview
+    if (volgendeEtappe && etappeInfo[volgendeEtappe]) {
+        const info = etappeInfo[volgendeEtappe];
+        const stageLabel = volgendeEtappe === 22 ? 'Eindstand' : `Etappe ${volgendeEtappe}`;
+        
+        console.log(`🔜 Setting "Volgende" to: ${stageLabel}`, info);
+        
+        document.getElementById('nextStageTitle').textContent = `🔜 Volgende - ${stageLabel}`;
+        document.getElementById('nextStageName').innerHTML = `<strong>${info.route || 'Route onbekend'}</strong>`;
+        document.getElementById('nextStageDetails').textContent = `${info.afstand || '-'} | ${info.type || '-'}`;
+        document.getElementById('nextStageDescription').textContent = info.datum ? `Datum: ${info.datum}` : '';
+    } else if (!volgendeEtappe) {
+        console.log(`🏁 No volgendeEtappe - showing "Tour Voltooid"`);
+        // No next stage - hide or show "Tour completed"
+        document.getElementById('nextStageTitle').textContent = `🏁 Tour Voltooid`;
+        document.getElementById('nextStageName').innerHTML = `<strong>Alle etappes afgerond</strong>`;
+        document.getElementById('nextStageDetails').textContent = `Eindstand definitief`;
+        document.getElementById('nextStageDescription').textContent = '';
+    } else {
+        console.log(`❌ volgendeEtappe = ${volgendeEtappe} but no data in etappeInfo`);
+        // Next stage exists but no data - show preview anyway
+        const stageLabel = volgendeEtappe === 22 ? 'Eindstand' : `Etappe ${volgendeEtappe}`;
+        document.getElementById('nextStageTitle').textContent = `🔜 Volgende - ${stageLabel}`;
+        document.getElementById('nextStageName').innerHTML = `<strong>Nog niet bekend</strong>`;
+        document.getElementById('nextStageDetails').textContent = `Info volgt later`;
+        document.getElementById('nextStageDescription').textContent = '';
+    }
+    
+    // Update podium title - toon laatste etappe resultaten
+    const podiumStageLabel = laatsteVoltooideEtappe === 22 ? 'Eindstand' : `Etappe ${laatsteVoltooideEtappe}`;
+    document.getElementById('dailyPodiumTitle').textContent = `🔵 Dagpodium - ${podiumStageLabel}`;
 }
 
 function updateStoryContent(stageData) {
@@ -193,7 +271,13 @@ function recalculateAllData() {
         for (let stageIndex = 0; stageIndex < currentStage; stageIndex++) {
             let stageTotal = 0;
             participant.team.forEach(rider => {
-                stageTotal += rider.points[stageIndex] || 0;
+                const riderPoints = rider.points[stageIndex] || 0;
+                stageTotal += riderPoints;
+                
+                // Debug Marc Soler specifically
+                if (rider.name === 'Marc Soler' && riderPoints > 0) {
+                    console.log(`📊 RECALC: ${rider.name} stage ${stageIndex + 1}: ${riderPoints} punten`);
+                }
             });
             participant.stagePoints[stageIndex] = stageTotal;
         }
@@ -233,21 +317,29 @@ function createAllRidersArray() {
     participants.forEach(participant => {
         participant.team.forEach(rider => {
             if (!riderStats[rider.name]) {
+                // FIRST TIME seeing this rider - copy his points directly
                 riderStats[rider.name] = {
                     name: rider.name,
                     team: rider.team,
-                    points: Array(currentStage).fill(0),
+                    points: [...rider.points], // Copy the points array
                     status: rider.status,
                     totalPoints: 0
                 };
-            }
-            
-            rider.points.slice(0, currentStage).forEach((points, stageIndex) => {
-                riderStats[rider.name].points[stageIndex] += points;
-            });
-            
-            if (rider.status === 'dropped') {
-                riderStats[rider.name].status = 'dropped';
+                
+                // Debug Marc Soler specifically
+                if (rider.name === 'Marc Soler') {
+                    console.log(`🆕 CREATE RIDERS: ${rider.name} FIRST TIME - points:`, rider.points.slice(0, currentStage));
+                }
+            } else {
+                // SUBSEQUENT TIMES - do NOT add points again (rider already counted)
+                if (rider.name === 'Marc Soler') {
+                    console.log(`⏭️ CREATE RIDERS: ${rider.name} ALREADY EXISTS - skipping points`);
+                }
+                
+                // Only update status if dropped
+                if (rider.status === 'dropped') {
+                    riderStats[rider.name].status = 'dropped';
+                }
             }
         });
     });
@@ -264,7 +356,13 @@ function updateTableHeaders() {
     // Update riders table header
     let ridersHeaderHtml = '<th>Pos</th><th>Renner</th><th>Totaal</th>';
     for (let i = 1; i <= currentStage; i++) {
-        ridersHeaderHtml += `<th>Et ${i}</th>`;
+        if (i <= 21) {
+            ridersHeaderHtml += `<th>Et ${i}</th>`;
+        }
+    }
+    // Voeg Eindstand kolom toe als er eindstand data is
+    if (window.hasEindstandData) {
+        ridersHeaderHtml += `<th>Eind</th>`;
     }
     ridersHeaderHtml += '<th>Status</th>';
     document.getElementById('ridersTableHeader').innerHTML = ridersHeaderHtml;
@@ -272,7 +370,13 @@ function updateTableHeaders() {
     // Update daily prizes header
     let dailyPrizesHeaderHtml = '<th>Rang</th><th>Deelnemer</th><th>Totaal</th>';
     for (let i = 1; i <= currentStage; i++) {
-        dailyPrizesHeaderHtml += `<th>Etappe ${i}</th>`;
+        if (i <= 21) {
+            dailyPrizesHeaderHtml += `<th>Etappe ${i}</th>`;
+        }
+    }
+    // Voeg Eindstand kolom toe als er eindstand data is
+    if (window.hasEindstandData) {
+        dailyPrizesHeaderHtml += `<th>Eind</th>`;
     }
     dailyPrizesHeaderHtml += '<th class="dagoverwinningen-column">Dagoverwinningen</th>';
     document.getElementById('dailyPrizesHeader').innerHTML = dailyPrizesHeaderHtml;
@@ -280,27 +384,134 @@ function updateTableHeaders() {
 
 // Utility functions
 function exportData() {
+    // Debug: check current values
+    console.log('📤 EXPORT DEBUG:');
+    console.log('  currentStage:', currentStage);
+    console.log('  participants.length:', participants.length);
+    console.log('  allRiders.length:', allRiders.length);
+    
+    // Ensure currentStage is valid
+    const actualCurrentStage = currentStage || 1;
+    
     const data = {
         participants: participants,
         allRiders: allRiders,
-        currentStage: currentStage,
-        exportDate: new Date().toISOString()
+        currentStage: actualCurrentStage,
+        exportDate: new Date().toISOString(),
+        debugInfo: {
+            participantsCount: participants.length,
+            ridersCount: allRiders.length,
+            actualStage: actualCurrentStage
+        }
     };
+    
+    console.log('📤 Exporting stage:', actualCurrentStage);
     
     const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `tourploeg-export-stage-${currentStage}.json`;
+    a.download = `tourploeg-export-stage-${actualCurrentStage}.json`;
     a.click();
     URL.revokeObjectURL(url);
+    
+    console.log('✅ Export complete:', `tourploeg-export-stage-${actualCurrentStage}.json`);
 }
 
 function resetData() {
     if (confirm('Weet je zeker dat je alle data wilt resetten?')) {
+        console.log('🧹 MANUAL RESET: NUCLEAR OPTION...');
+        
+        // NUCLEAR RESET - clear absolutely everything
         participants = [];
         allRiders = [];
         currentStage = 1;
+        window.etappeInfoData = null;
+        window.hasEindstandData = false;
+        
+        // Clear ALL window object properties
+        const windowKeys = Object.keys(window);
+        windowKeys.forEach(key => {
+            if (key.includes('tourploeg') || key.includes('excel') || key.includes('cache') || key.includes('data')) {
+                try {
+                    delete window[key];
+                    console.log('🗑️ Deleted window.' + key);
+                } catch(e) {
+                    // Some properties can't be deleted
+                }
+            }
+        });
+        
+        // Clear sessionStorage
+        try {
+            sessionStorage.clear();
+            console.log('🗑️ sessionStorage cleared');
+        } catch(e) {
+            console.log('⚠️ Could not clear sessionStorage:', e);
+        }
+        
+        // Clear service worker cache
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                for(let registration of registrations) {
+                    registration.unregister();
+                    console.log('🗑️ ServiceWorker unregistered');
+                }
+            });
+        }
+        
+        // Clear all caches
+        if ('caches' in window) {
+            caches.keys().then(function(names) {
+                for (let name of names) {
+                    caches.delete(name);
+                    console.log('🗑️ Cache deleted:', name);
+                }
+            });
+        }
+        
+        // Clear ALL localStorage completely - including export cache
+        try {
+            // Excel-related cache
+            localStorage.removeItem('temp-excel-data');
+            localStorage.removeItem('cached-participants');
+            localStorage.removeItem('cached-riders');
+            localStorage.removeItem('cached-stage');
+            localStorage.removeItem('excel-file-backup');
+            localStorage.removeItem('excel-file-name');
+            localStorage.removeItem('excel-file-date');
+            
+            // Export-related cache (JSON downloads)
+            localStorage.removeItem('export-data');
+            localStorage.removeItem('last-export');
+            localStorage.removeItem('tourploeg-data');
+            localStorage.removeItem('participants-backup');
+            localStorage.removeItem('allRiders-backup');
+            
+            // Browser cache busting
+            localStorage.removeItem('app-cache');
+            localStorage.removeItem('data-cache');
+            localStorage.removeItem('stage-cache');
+            
+            // Clear ALL localStorage items that might exist
+            const keysToRemove = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && (key.includes('tourploeg') || key.includes('excel') || key.includes('export') || key.includes('cache'))) {
+                    keysToRemove.push(key);
+                }
+            }
+            keysToRemove.forEach(key => localStorage.removeItem(key));
+            
+            console.log('🗑️ ALL localStorage completely wiped (including exports)');
+        } catch(e) {
+            console.log('⚠️ Could not clear localStorage:', e);
+        }
+        
+        // Force garbage collection if possible
+        if (window.gc) {
+            window.gc();
+        }
         
         const gettingStarted = document.getElementById('gettingStarted');
         if (gettingStarted) gettingStarted.style.display = 'block';
@@ -311,14 +522,91 @@ function resetData() {
         
         loadParticipantsTable();
         updatePodiums();
+        updateTableHeaders();
         
-        alert('✅ Alle data gereset!');
+        console.log('✅ MANUAL RESET complete - fresh start');
+        
+        // Force hard page reload to clear any remaining cache
+        if (confirm('Wil je de pagina volledig herladen om alle cache te wissen?')) {
+            window.location.reload(true); // Hard reload
+        } else {
+            alert('✅ Alle data gereset! Upload nieuwe Excel voor fresh start.');
+        }
     }
+}
+
+// Debug function to inspect all cache
+function inspectAllCache() {
+    console.log('🔍 CACHE INSPECTION:');
+    
+    // Check localStorage
+    console.log('📦 localStorage:');
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        console.log(`  ${key}: ${localStorage.getItem(key)?.substring(0, 100)}...`);
+    }
+    
+    // Check sessionStorage
+    console.log('📦 sessionStorage:');
+    for (let i = 0; i < sessionStorage.length; i++) {
+        const key = sessionStorage.key(i);
+        console.log(`  ${key}: ${sessionStorage.getItem(key)?.substring(0, 100)}...`);
+    }
+    
+    // Check window properties
+    console.log('📦 window properties:');
+    Object.keys(window).forEach(key => {
+        if (key.includes('tourploeg') || key.includes('excel') || key.includes('cache') || key.includes('data')) {
+            console.log(`  window.${key}:`, window[key]);
+        }
+    });
+    
+    // Check global variables
+    console.log('📦 Global variables:');
+    console.log('  participants:', participants);
+    console.log('  allRiders:', allRiders);
+    console.log('  currentStage:', currentStage);
 }
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', async function() {
     console.log('🚴‍♂️ Tour de France App Loading...');
+    
+    // COMPLETE FRESH START - clear any cached data on page load
+    console.log('🧹 Clearing any cached data on fresh page load...');
+    participants = [];
+    allRiders = [];
+    currentStage = 1;
+    window.etappeInfoData = null;
+    window.hasEindstandData = false;
+    
+    // Clear ALL localStorage data that might interfere
+    try {
+        // Excel-related cache
+        localStorage.removeItem('temp-excel-data');
+        localStorage.removeItem('cached-participants');
+        localStorage.removeItem('cached-riders');
+        localStorage.removeItem('cached-stage');
+        localStorage.removeItem('excel-file-backup');
+        localStorage.removeItem('excel-file-name');
+        localStorage.removeItem('excel-file-date');
+        
+        // Export-related cache
+        localStorage.removeItem('export-data');
+        localStorage.removeItem('last-export');
+        localStorage.removeItem('tourploeg-data');
+        localStorage.removeItem('participants-backup');
+        localStorage.removeItem('allRiders-backup');
+        
+        // Browser cache busting
+        localStorage.removeItem('app-cache');
+        localStorage.removeItem('data-cache');
+        localStorage.removeItem('stage-cache');
+        
+        console.log('🗑️ Init: ALL cache cleared');
+    } catch(e) {
+        console.log('⚠️ Could not clear localStorage on init:', e);
+    }
     
     loadParticipantsTable();
     updatePodiums();
@@ -334,8 +622,281 @@ document.addEventListener('DOMContentLoaded', async function() {
         await ExcelPersistence.initialize();
     }
     
+    // Trigger podium animation on initial load (after a short delay to ensure data is loaded)
+    setTimeout(() => {
+        triggerPodiumAnimation();
+    }, 1000);
+    
+    // Initialize with current year
+    updateTitleForYear(new Date().getFullYear().toString());
+    
     console.log('✅ App initialized!');
 });
+
+// Historie functionaliteit
+let historieMode = false;
+let currentHistorieYear = null;
+let originalData = null; // Backup van originele data
+
+function loadHistorieTab() {
+    console.log('📚 Loading historie tab...');
+    loadAvailableYears();
+}
+
+async function loadAvailableYears() {
+    try {
+        console.log('📅 Loading available years from tdf-historie.xlsx...');
+        
+        // Try to load tdf-historie.xlsx
+        const response = await fetch('./tdf-historie.xlsx');
+        if (!response.ok) {
+            throw new Error('Historie bestand niet gevonden');
+        }
+        
+        const arrayBuffer = await response.arrayBuffer();
+        const workbook = XLSX.read(arrayBuffer, {type: 'array'});
+        
+        const yearSelector = document.getElementById('historieYearSelector');
+        yearSelector.innerHTML = '<option value="">Kies een jaar...</option>';
+        
+        // Add years from available sheets
+        workbook.SheetNames.forEach(sheetName => {
+            // Check if it's a year (4 digits)
+            if (/^\d{4}$/.test(sheetName)) {
+                const option = document.createElement('option');
+                option.value = sheetName;
+                option.textContent = sheetName;
+                yearSelector.appendChild(option);
+            }
+        });
+        
+        console.log('✅ Years loaded:', workbook.SheetNames);
+        
+    } catch (error) {
+        console.error('❌ Error loading available years:', error);
+        const yearSelector = document.getElementById('historieYearSelector');
+        yearSelector.innerHTML = '<option value="">Geen historie beschikbaar</option>';
+    }
+}
+
+async function loadHistorieYear(year) {
+    if (!year) return;
+    
+    console.log(`🕰️ Loading historie for year: ${year}`);
+    
+    // Show loading status
+    const statusDiv = document.getElementById('historieStatus');
+    const statusTitle = document.getElementById('historieStatusTitle');
+    const statusText = document.getElementById('historieStatusText');
+    
+    statusDiv.style.display = 'block';
+    statusTitle.textContent = `📊 ${year} wordt geladen...`;
+    statusText.textContent = 'Even geduld alstublieft...';
+    
+    try {
+        // Backup current data if not already backed up
+        if (!historieMode && !originalData) {
+            originalData = {
+                participants: [...participants],
+                allRiders: [...allRiders],
+                currentStage: currentStage,
+                etappeInfoData: window.etappeInfoData ? {...window.etappeInfoData} : null
+            };
+        }
+        
+        // Load historic Excel file completely - same structure as current
+        const response = await fetch('./tdf-historie.xlsx');
+        if (!response.ok) {
+            throw new Error('Historie Excel niet gevonden');
+        }
+        
+        const arrayBuffer = await response.arrayBuffer();
+        const workbook = XLSX.read(arrayBuffer, {type: 'array'});
+        
+        console.log(`📊 Historie Excel loaded, tabs:`, workbook.SheetNames);
+        
+        // Check if the requested year tab exists
+        if (!workbook.SheetNames.includes(year)) {
+            throw new Error(`Tab "${year}" niet gevonden in historie bestand`);
+        }
+        
+        // Process the ENTIRE historie workbook using existing parseExcelData
+        // Just replace the uitslagen tab name from 'Huidig' to the year
+        const originalSheets = {...workbook.Sheets};
+        
+        // Rename the year tab to 'Huidig' so existing logic works
+        if (workbook.Sheets[year]) {
+            workbook.Sheets['Huidig'] = workbook.Sheets[year];
+            workbook.SheetNames = workbook.SheetNames.map(name => name === year ? 'Huidig' : name);
+        }
+        
+        console.log(`📊 Processing complete historie workbook for ${year}`);
+        
+        // Use existing parseExcelData function with the complete workbook
+        parseExcelData(workbook);
+        
+        const loaded = true;
+        
+        if (loaded) {
+            // Switch to historie mode
+            historieMode = true;
+            currentHistorieYear = year;
+            
+            // Update title and show historic indicator
+            updateTitleForYear(year);
+            showHistoricIndicator();
+            
+            // Hide upload tab in historie mode
+            const uploadTab = document.querySelector('[onclick="showTab(\'upload\')"]');
+            if (uploadTab) uploadTab.style.display = 'none';
+            
+            // Update status
+            statusTitle.textContent = `🏆 ${year} Geladen!`;
+            statusText.textContent = `Bekijk de resultaten in de andere tabbladen`;
+            
+            // Auto-navigate to home to show results
+            setTimeout(() => {
+                showTab('home');
+                statusDiv.style.display = 'none';
+            }, 2000);
+            
+        } else {
+            throw new Error(`Geen data gevonden voor jaar ${year}`);
+        }
+        
+    } catch (error) {
+        console.error('❌ Error loading historie year:', error);
+        statusTitle.textContent = `❌ Fout bij laden ${year}`;
+        statusText.textContent = error.message;
+        
+        setTimeout(() => {
+            statusDiv.style.display = 'none';
+        }, 3000);
+    }
+}
+
+async function returnToCurrentYear() {
+    console.log('🔙 Returning to current year...');
+    
+    try {
+        // Reload current Excel file completely
+        const response = await fetch('./tdf-current.xlsx');
+        if (!response.ok) {
+            throw new Error('Current Excel niet gevonden');
+        }
+        
+        const arrayBuffer = await response.arrayBuffer();
+        const workbook = XLSX.read(arrayBuffer, {type: 'array'});
+        
+        console.log('📊 Reloading current year completely...');
+        
+        // Use existing parseExcelData function with current workbook
+        parseExcelData(workbook);
+        
+    } catch (error) {
+        console.error('❌ Error reloading current year:', error);
+        // Fallback to original data if available
+        if (originalData) {
+            participants = [...originalData.participants];
+            allRiders = [...originalData.allRiders];
+            currentStage = originalData.currentStage;
+            window.etappeInfoData = originalData.etappeInfoData;
+            
+            // Update all tables
+            loadParticipantsTable();
+            loadRidersTable();
+            loadMatrixTable();
+            loadDailyPrizesTable();
+            updatePodiums();
+            updateTableHeaders();
+            if (typeof updateStageInfoFromExcel === 'function') {
+                updateStageInfoFromExcel();
+            }
+        }
+    }
+    
+    // Reset historie mode
+    historieMode = false;
+    currentHistorieYear = null;
+    
+    // Update title and hide historic indicator
+    updateTitleForYear(new Date().getFullYear().toString());
+    hideHistoricIndicator();
+    
+    // Show upload tab again
+    const uploadTab = document.querySelector('[onclick="showTab(\'upload\')"]');
+    if (uploadTab) uploadTab.style.display = 'inline-block';
+    
+    // Reset year selector
+    const yearSelector = document.getElementById('historieYearSelector');
+    if (yearSelector) yearSelector.value = '';
+    
+    // Navigate to home
+    showTab('home');
+}
+
+function updateTitleForYear(year) {
+    const title = document.getElementById('mainTitle');
+    if (title) {
+        title.textContent = `🚴‍♂️ Tour de France Poule ${year}`;
+    }
+}
+
+function showHistoricIndicator() {
+    const indicator = document.getElementById('historicIndicator');
+    if (indicator) {
+        indicator.style.display = 'block';
+        
+        // Set historic bike image with fallback to emoji
+        const bikeImg = document.getElementById('historicBike');
+        const bikeDisplay = document.getElementById('historicBikeDisplay');
+        
+        // Try to use historic bike image, fallback to emoji
+        const historicBikePath = './historic-bike.png';
+        
+        if (bikeImg) {
+            bikeImg.src = historicBikePath;
+            bikeImg.style.display = 'block';
+            bikeImg.onerror = function() {
+                // Fallback: replace with emoji if image not found
+                bikeImg.style.display = 'none';
+                if (!bikeImg.parentNode.querySelector('.bike-emoji')) {
+                    const emojiSpan = document.createElement('span');
+                    emojiSpan.className = 'bike-emoji';
+                    emojiSpan.innerHTML = '🚲';
+                    emojiSpan.style.fontSize = '40px';
+                    emojiSpan.style.marginRight = '10px';
+                    bikeImg.parentNode.insertBefore(emojiSpan, bikeImg);
+                }
+            };
+        }
+        
+        if (bikeDisplay) {
+            bikeDisplay.src = historicBikePath;
+            bikeDisplay.style.display = 'block';
+            bikeDisplay.onerror = function() {
+                // Fallback: replace with emoji
+                bikeDisplay.style.display = 'none';
+                if (!bikeDisplay.parentNode.querySelector('.bike-emoji-display')) {
+                    const emojiSpan = document.createElement('span');
+                    emojiSpan.className = 'bike-emoji-display';
+                    emojiSpan.innerHTML = '🚲';
+                    emojiSpan.style.fontSize = '80px';
+                    emojiSpan.style.marginBottom = '20px';
+                    emojiSpan.style.display = 'block';
+                    bikeDisplay.parentNode.insertBefore(emojiSpan, bikeDisplay);
+                }
+            };
+        }
+    }
+}
+
+function hideHistoricIndicator() {
+    const indicator = document.getElementById('historicIndicator');
+    if (indicator) {
+        indicator.style.display = 'none';
+    }
+}
 
 // Podium Animation Challenge Function
 function triggerPodiumAnimation() {
