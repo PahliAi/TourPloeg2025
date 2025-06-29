@@ -95,9 +95,11 @@ async function checkForGitHubExcel() {
         
         for (const path of possiblePaths) {
             try {
-                const response = await fetch(repoUrl + path);
+                // Add cache busting parameter
+                const cacheBuster = `?v=${Date.now()}`;
+                const response = await fetch(repoUrl + path + cacheBuster);
                 if (response.ok) {
-                    console.log(`📊 Found Excel file at: ${path}`);
+                    console.log(`📊 Found Excel file at: ${path} (cache-busted)`);
                     
                     const arrayBuffer = await response.arrayBuffer();
                     const workbook = XLSX.read(arrayBuffer, {type: 'array'});
@@ -191,7 +193,7 @@ async function initializeExcelPersistence() {
         console.log('⚠️ Could not clear localStorage:', e);
     }
     
-    // Try to auto-load tdf-current.xlsx from GitHub
+    // Try to auto-load tdf-current.xlsx from GitHub with cache busting
     console.log('🔍 Checking for tdf-current.xlsx...');
     const githubLoaded = await checkForGitHubExcel();
     
@@ -243,9 +245,11 @@ async function loadHistoricData(year) {
         
         for (const path of possiblePaths) {
             try {
-                const response = await fetch(repoUrl + path);
+                // Add cache busting parameter for historic files too
+                const cacheBuster = `?v=${Date.now()}`;
+                const response = await fetch(repoUrl + path + cacheBuster);
                 if (response.ok) {
-                    console.log(`📊 Found historic file at: ${path}`);
+                    console.log(`📊 Found historic file at: ${path} (cache-busted)`);
                     
                     const arrayBuffer = await response.arrayBuffer();
                     const workbook = XLSX.read(arrayBuffer, {type: 'array'});
@@ -446,7 +450,9 @@ async function scanAvailableYears() {
         
         for (const path of possiblePaths) {
             try {
-                const response = await fetch(repoUrl + path, { method: 'HEAD' }); // Only check if file exists
+                // Add cache busting for availability check too
+                const cacheBuster = `?v=${Date.now()}`;
+                const response = await fetch(repoUrl + path + cacheBuster, { method: 'HEAD' }); // Only check if file exists
                 if (response.ok) {
                     availableYears.push(year);
                     console.log(`✅ Found historic file: ${path}`);
