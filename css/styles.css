@@ -375,9 +375,18 @@ table .btn:hover {
     color: #FF8C00;
 }
 
+/* Improved dropped rider styling */
 .rider-dropped {
     color: #999;
-    text-decoration: line-through;
+}
+
+.rider-dropped-row {
+    background-color: rgba(128, 128, 128, 0.05) !important;
+    border-left: 3px solid rgba(220, 53, 69, 0.3);
+}
+
+.rider-dropped-row:hover {
+    background-color: rgba(128, 128, 128, 0.1) !important;
 }
 
 .points-cell {

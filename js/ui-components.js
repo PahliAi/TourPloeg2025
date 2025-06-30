@@ -71,12 +71,17 @@ function loadRidersTable() {
             stagePointsHtml += `<td class="points-cell ${statusClass}" style="background: #ffe4b5; font-weight: bold;">${eindstandPoints}</td>`;
         }
         
+        // Better status indicators
+        const statusIcon = rider.status === 'dropped' ? '🔴 Uitgevallen' : '🟢 Actief';
+        const rowClass = rider.status === 'dropped' ? 'rider-dropped-row' : '';
+        
+        row.className = rowClass;
         row.innerHTML = `
             <td><strong>${index + 1}</strong></td>
             <td class="${statusClass}">${rider.name}</td>
             <td class="points-cell ${statusClass}"><strong>${rider.totalPoints}</strong></td>
             ${stagePointsHtml}
-            <td class="${statusClass}">${rider.status === 'dropped' ? '<span style="color: #888;">✓ Uitgevallen</span>' : '✅ Actief'}</td>
+            <td class="${statusClass}">${statusIcon}</td>
         `;
         tbody.appendChild(row);
     });
@@ -131,9 +136,14 @@ function loadMatrixTable() {
             participantCells += `<td>${cellContent}</td>`;
         });
         
+        // Better status indicators for matrix
+        const matrixStatusIcon = rider.status === 'dropped' ? '🔴' : '🟢';
+        const matrixRowClass = rider.status === 'dropped' ? 'rider-dropped-row' : '';
+        
+        row.className = matrixRowClass;
         row.innerHTML = `
             <td class="${statusClass}">${rider.name}</td>
-            <td class="${statusClass}">${rider.status === 'dropped' ? '❌' : '✅'}</td>
+            <td class="${statusClass}">${matrixStatusIcon}</td>
             <td class="points-cell"><strong>${rider.totalSelections}</strong></td>
             ${participantCells}
         `;
@@ -397,7 +407,7 @@ function showParticipantDetail(participantName) {
                 <td class="${statusClass}">${rider.team || '-'}</td>
                 <td class="points-cell ${statusClass}"><strong>${totalPoints}</strong></td>
                 ${stagePointsHtml}
-                <td class="${statusClass}">${rider.status === 'dropped' ? '<span style="color: #888;">✓ Uitgevallen</span>' : '✅ Actief'}</td>
+                <td class="${statusClass}">${rider.status === 'dropped' ? '🔴 Uitgevallen' : '🟢 Actief'}</td>
             </tr>
         `;
     });

@@ -119,9 +119,10 @@ function parseExcelData(workbook) {
         
         const uitlagenSheet = workbook.Sheets[uitlagenSheetName];
         const uitlagenData = XLSX.utils.sheet_to_json(uitlagenSheet, {header: 1});
-        // Parse optionele punten tabs
+        // Parse optionele tabs
         let etappePunten = null;
         let eindklassementPunten = null;
+        let uitvallersData = null;
         
         if (workbook.SheetNames.includes('Etappe punten')) {
             const etappePuntenSheet = workbook.Sheets['Etappe punten'];
@@ -133,8 +134,14 @@ function parseExcelData(workbook) {
             eindklassementPunten = XLSX.utils.sheet_to_json(eindklassementPuntenSheet, {header: 1});
         }
         
+        if (workbook.SheetNames.includes('Uitvallers')) {
+            const uitvallersSheet = workbook.Sheets['Uitvallers'];
+            uitvallersData = XLSX.utils.sheet_to_json(uitvallersSheet, {header: 1});
+            console.log('📋 Found Uitvallers tab');
+        }
+        
         // Verwerk de data
-        processExcelData(rennersData, deelnemersData, uitlagenData, etappePunten, eindklassementPunten);
+        processExcelData(rennersData, deelnemersData, uitlagenData, etappePunten, eindklassementPunten, uitvallersData);
         
     } catch (error) {
         // Verwijder loading message
@@ -145,7 +152,7 @@ function parseExcelData(workbook) {
     }
 }
 
-function processExcelData(rennersData, deelnemersData, uitlagenData, etappePunten, eindklassementPunten) {
+function processExcelData(rennersData, deelnemersData, uitlagenData, etappePunten, eindklassementPunten, uitvallersData) {
     // NUCLEAR RESET - clear ALL possible cache sources
     
     // Initialize from Renners tab - ALLE renners krijgen een entry
@@ -303,6 +310,11 @@ function processExcelData(rennersData, deelnemersData, uitlagenData, etappePunte
     // Verwerk etappe uitslagen
     if (uitlagenData && uitlagenData.length > 1) {
         processEtappeUitslagen(uitlagenData, etappePunten, eindklassementPunten);
+    }
+    
+    // Verwerk uitvallers
+    if (uitvallersData && uitvallersData.length > 1) {
+        processUitvallers(uitvallersData);
     }
     
     // Update alle tabellen
@@ -816,4 +828,38 @@ function processEindklassementData(uitlagenData, etappeInfo, eindstandPunten) {
     
     console.log(`✅ Eindstand completed: ${processedRiders} riders processed`);
     console.log(`🚨 CRITICAL: currentStage after eindstand processing = ${currentStage}`);
+}
+
+function processUitvallers(uitvallersData) {
+    console.log('🚫 Processing Uitvallers...');
+    
+    let uitvallersCount = 0;
+    
+    // Skip header row (row 0) en verwerk alle uitvallers
+    for (let row = 1; row < uitvallersData.length; row++) {
+        if (uitvallersData[row] && uitvallersData[row][0]) {
+            const uitvallerNaam = uitvallersData[row][0].toString().trim();
+            
+            if (uitvallerNaam && uitvallerNaam !== '') {
+                // Update status in window.allRidersFromExcel
+                if (window.allRidersFromExcel[uitvallerNaam]) {
+                    window.allRidersFromExcel[uitvallerNaam].status = 'dropped';
+                    console.log(`🚫 Marked as dropped: ${uitvallerNaam}`);
+                    uitvallersCount++;
+                } else {
+                    console.log(`⚠️ Uitvaller not found in riders: ${uitvallerNaam}`);
+                }
+                
+                // Update status in participant teams
+                participants.forEach(participant => {
+                    const rider = participant.team.find(r => r.name === uitvallerNaam);
+                    if (rider) {
+                        rider.status = 'dropped';
+                    }
+                });
+            }
+        }
+    }
+    
+    console.log(`✅ Processed ${uitvallersCount} uitvallers`);
 }
