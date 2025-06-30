@@ -352,6 +352,9 @@ function updatePodiums() {
     updatePodiumContent('daily', dailyRanking, lastStageIndex);
     updatePodiumContent('general', generalRanking, 'total');
     updatePodiumContent('dailywins', dailyWinsRanking, 'wins');
+    
+    // Update overview block
+    updateOverviewBlock(dailyRanking, generalRanking, dailyWinsRanking, lastStageIndex);
 }
 
 function updatePodiumContent(type, ranking, scoreType) {
@@ -518,6 +521,72 @@ function closeDetailView() {
     document.body.style.overflow = '';
     document.body.style.position = '';
     document.body.style.width = '';
+}
+
+function updateOverviewBlock(dailyRanking, generalRanking, dailyWinsRanking, lastStageIndex) {
+    // Update title with current stage
+    const stageLabel = currentStage === 22 ? 'Eindstand' : `Etappe ${currentStage}`;
+    document.getElementById('overviewTitle').textContent = `📊 Overzicht - ${stageLabel}`;
+    
+    // Update daily winner (blue jersey)
+    const dailyWinner = dailyRanking[0];
+    document.getElementById('overviewDailyWinner').textContent = dailyWinner?.name || '-';
+    const dailyPoints = dailyWinner ? (dailyWinner.stagePoints[lastStageIndex] || 0) : 0;
+    document.getElementById('overviewDailyStats').textContent = `${dailyPoints} punten`;
+    
+    // Update general leader (yellow jersey)
+    const generalLeader = generalRanking[0];
+    document.getElementById('overviewGeneralWinner').textContent = generalLeader?.name || '-';
+    const totalPoints = generalLeader ? generalLeader.totalPoints : 0;
+    document.getElementById('overviewGeneralStats').textContent = `${totalPoints} punten totaal`;
+    
+    // Update most daily wins (milka bar)
+    const dailyWinsLeader = dailyWinsRanking[0];
+    document.getElementById('overviewDailyWinsWinner').textContent = dailyWinsLeader?.name || '-';
+    const dailyWins = dailyWinsLeader ? dailyWinsLeader.dailyWins : 0;
+    document.getElementById('overviewDailyWinsStats').textContent = `${dailyWins} dagoverwinning${dailyWins !== 1 ? 'en' : ''}`;
+    
+    // Calculate biggest daily improvement (green arrow)
+    const biggestImprover = calculateBiggestImprovement();
+    const improverElement = document.getElementById('biggestImproverName');
+    const improverStatsElement = document.getElementById('overviewImproverStats');
+    
+    if (biggestImprover) {
+        improverElement.textContent = biggestImprover.name;
+        const improvementText = biggestImprover.improvement > 0 ? 
+            `Gestegen ${biggestImprover.improvement} positie${biggestImprover.improvement !== 1 ? 's' : ''}` :
+            'Geen stijging';
+        improverStatsElement.textContent = improvementText;
+    } else {
+        improverElement.textContent = '-';
+        improverStatsElement.textContent = 'Geen data';
+    }
+}
+
+function calculateBiggestImprovement() {
+    if (!participants || participants.length === 0 || currentStage < 2) {
+        return null;
+    }
+    
+    // Use the EXISTING ranking data instead of recalculating!
+    const rankingData = getRankingChanges();
+    
+    let biggestImprovement = 0;
+    let improverName = null;
+    
+    // Find the participant with the biggest negative position change (moved up the most)
+    rankingData.forEach(participant => {
+        const latestStage = participant.stages[participant.stages.length - 1];
+        if (latestStage && latestStage.positionChange !== undefined) {
+            const improvement = -latestStage.positionChange; // Convert to positive for "moved up"
+            if (improvement > biggestImprovement) {
+                biggestImprovement = improvement;
+                improverName = participant.name;
+            }
+        }
+    });
+    
+    return biggestImprovement > 0 ? { name: improverName, improvement: biggestImprovement } : null;
 }
 
 // Excel View functies verwijderd
