@@ -432,18 +432,23 @@ function calculateAllDailyWins() {
     
     for (let stage = 0; stage < currentStage; stage++) {
         let maxPoints = 0;
-        let winner = null;
         
+        // First pass: find the maximum points for this stage
         participants.forEach(participant => {
             const stagePoints = participant.stagePoints[stage] || 0;
             if (stagePoints > maxPoints) {
                 maxPoints = stagePoints;
-                winner = participant;
             }
         });
         
-        if (winner && maxPoints > 0) {
-            winner.dailyWins++;
+        // Second pass: give daily win to ALL participants with max points
+        if (maxPoints > 0) {
+            participants.forEach(participant => {
+                const stagePoints = participant.stagePoints[stage] || 0;
+                if (stagePoints === maxPoints) {
+                    participant.dailyWins++;
+                }
+            });
         }
     }
 }

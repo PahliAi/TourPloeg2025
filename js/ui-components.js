@@ -15,20 +15,25 @@ function loadParticipantsTable() {
     participants.forEach((participant, index) => {
         const row = document.createElement('tr');
         
-        // Count yellow jerseys (gele truien) - count stages where this participant was #1
+        // Count yellow jerseys (gele truien) - count stages where this participant was tied for #1
         let yellowJerseys = 0;
         for (let stage = 0; stage < currentStage; stage++) {
             let maxPoints = 0;
-            let leader = null;
+            
+            // First pass: find maximum points for this stage
             participants.forEach(p => {
                 const stagePoints = p.stagePoints[stage] || 0;
                 if (stagePoints > maxPoints) {
                     maxPoints = stagePoints;
-                    leader = p;
                 }
             });
-            if (leader === participant && maxPoints > 0) {
-                yellowJerseys++;
+            
+            // Second pass: check if THIS participant has max points
+            if (maxPoints > 0) {
+                const participantPoints = participant.stagePoints[stage] || 0;
+                if (participantPoints === maxPoints) {
+                    yellowJerseys++;
+                }
             }
         }
         
@@ -392,48 +397,49 @@ function updatePodiumContent(type, ranking, scoreType) {
     
     // Display top 3 positions (accounting for ties)
     let position = 1;
-    let podiumCount = 0;
+    let positionCount = 0;
     
-    for (let groupIndex = 0; groupIndex < scoreGroups.length && podiumCount < 3; groupIndex++) {
+    for (let groupIndex = 0; groupIndex < scoreGroups.length && positionCount < 3; groupIndex++) {
         const group = scoreGroups[groupIndex];
         
-        for (let participantIndex = 0; participantIndex < group.participants.length && podiumCount < 3; participantIndex++) {
-            const participant = group.participants[participantIndex];
-            let points, subtitle;
-            
-            if (scoreType === 'total') {
-                points = `${participant.totalPoints} punten`;
-                subtitle = position === 1 ? '🥇 Gele Trui!' : (position === 2 ? '🥈 Tweede plaats' : '🥉 Derde plaats');
-            } else if (scoreType === 'wins') {
-                points = `${participant.dailyWins} dagoverwinning${participant.dailyWins !== 1 ? 'en' : ''}`;
-                subtitle = position === 1 ? '🥇 Dagkoning!' : (position === 2 ? '🥈 Tweede plaats' : '🥉 Derde plaats');
-            } else {
-                points = `${participant.stagePoints[scoreType] || 0} punten`;
-                subtitle = position === 1 ? '🥇 Dagwinnaar!' : (position === 2 ? '🥈 Tweede plaats' : '🥉 Derde plaats');
-            }
-
-            // If there are ties, show shared position
-            let displayPosition = position;
-            if (group.participants.length > 1) {
-                subtitle = `${subtitle} (gedeeld)`;
-            }
-
-            const positionClass = position === 1 ? 'first' : (position === 2 ? 'second' : 'third');
-            
-            podiumHtml += `
-                <div class="podium-place ${positionClass}">
-                    <div class="podium-number">${displayPosition}</div>
-                    <div class="podium-name">${participant.name}</div>
-                    <div class="podium-points">${points}</div>
-                    <div style="font-size: 0.8em; margin-top: 5px;">${subtitle}</div>
-                </div>
-            `;
-            
-            podiumCount++;
-        }
+        // Create ONE shared podium place for all tied participants
+        let points, subtitle;
+        const firstParticipant = group.participants[0];
         
-        // Update position based on how many participants were in this score group
-        position += group.participants.length;
+        if (scoreType === 'total') {
+            points = `${firstParticipant.totalPoints} punten`;
+            subtitle = position === 1 ? '🥇 Gele Trui!' : (position === 2 ? '🥈 Tweede plaats' : '🥉 Derde plaats');
+        } else if (scoreType === 'wins') {
+            points = `${firstParticipant.dailyWins} dagoverwinning${firstParticipant.dailyWins !== 1 ? 'en' : ''}`;
+            subtitle = position === 1 ? '🥇 Dagkoning!' : (position === 2 ? '🥈 Tweede plaats' : '🥉 Derde plaats');
+        } else {
+            points = `${firstParticipant.stagePoints[scoreType] || 0} punten`;
+            subtitle = position === 1 ? '🥇 Dagwinnaar!' : (position === 2 ? '🥈 Tweede plaats' : '🥉 Derde plaats');
+        }
+
+        // If there are ties, show shared position
+        if (group.participants.length > 1) {
+            subtitle = `${subtitle} (gedeeld)`;
+        }
+
+        const positionClass = position === 1 ? 'first' : (position === 2 ? 'second' : 'third');
+        
+        // Create names list with line breaks (max 3 names)
+        const limitedParticipants = group.participants.slice(0, 3);
+        const namesHtml = limitedParticipants.map(p => p.name).join('<br>');
+        
+        podiumHtml += `
+            <div class="podium-place ${positionClass}">
+                <div class="podium-number">${position}</div>
+                <div class="podium-name">${namesHtml}</div>
+                <div class="podium-points">${points}</div>
+                <div style="font-size: 0.8em; margin-top: 5px;">${subtitle}</div>
+            </div>
+        `;
+        
+        // Move to next position (simple 1,2,3 not Olympic-style)
+        position++;
+        positionCount++;
     }
     
     const podiums = document.querySelectorAll('.podium .podium-places');
@@ -523,36 +529,84 @@ function closeDetailView() {
     document.body.style.width = '';
 }
 
+function getTopScorers(ranking, scoreType, stageIndex = null) {
+    if (ranking.length === 0) return [];
+    
+    // Use same logic as podiums - group by score and show 1st place winners only
+    const scoreGroups = [];
+    let currentScore = null;
+    let currentGroup = [];
+    
+    ranking.forEach(participant => {
+        let score;
+        if (scoreType === 'total') {
+            score = participant.totalPoints;
+        } else if (scoreType === 'wins') {
+            score = participant.dailyWins;
+        } else if (scoreType === 'stage') {
+            score = participant.stagePoints[stageIndex] || 0;
+        }
+        
+        if (score !== currentScore) {
+            if (currentGroup.length > 0) {
+                scoreGroups.push({score: currentScore, participants: currentGroup});
+            }
+            currentScore = score;
+            currentGroup = [participant];
+        } else {
+            currentGroup.push(participant);
+        }
+    });
+    
+    if (currentGroup.length > 0) {
+        scoreGroups.push({score: currentScore, participants: currentGroup});
+    }
+    
+    // Return 1st place participants (all tied for 1st), limited to max 3
+    if (scoreGroups.length > 0) {
+        return scoreGroups[0].participants.slice(0, 3);
+    }
+    
+    return [];
+}
+
 function updateOverviewBlock(dailyRanking, generalRanking, dailyWinsRanking, lastStageIndex) {
     // Update title with current stage
     const stageLabel = currentStage === 22 ? 'Eindstand' : `Etappe ${currentStage}`;
     document.getElementById('overviewTitle').textContent = `📊 Overzicht - ${stageLabel}`;
     
-    // Update daily winner (blue jersey)
-    const dailyWinner = dailyRanking[0];
-    document.getElementById('overviewDailyWinner').textContent = dailyWinner?.name || '-';
-    const dailyPoints = dailyWinner ? (dailyWinner.stagePoints[lastStageIndex] || 0) : 0;
+    // Get all tied winners for each category
+    const dailyWinners = getTopScorers(dailyRanking, 'stage', lastStageIndex);
+    const generalLeaders = getTopScorers(generalRanking, 'total');
+    const dailyWinsLeaders = getTopScorers(dailyWinsRanking, 'wins');
+    
+    // Update daily winners (blue jersey)
+    const dailyNamesHtml = dailyWinners.map(p => p.name).join('<br>');
+    document.getElementById('overviewDailyWinner').innerHTML = dailyNamesHtml || '-';
+    const dailyPoints = dailyWinners.length > 0 ? (dailyWinners[0].stagePoints[lastStageIndex] || 0) : 0;
     document.getElementById('overviewDailyStats').textContent = `${dailyPoints} punten`;
     
-    // Update general leader (yellow jersey)
-    const generalLeader = generalRanking[0];
-    document.getElementById('overviewGeneralWinner').textContent = generalLeader?.name || '-';
-    const totalPoints = generalLeader ? generalLeader.totalPoints : 0;
+    // Update general leaders (yellow jersey)
+    const generalNamesHtml = generalLeaders.map(p => p.name).join('<br>');
+    document.getElementById('overviewGeneralWinner').innerHTML = generalNamesHtml || '-';
+    const totalPoints = generalLeaders.length > 0 ? generalLeaders[0].totalPoints : 0;
     document.getElementById('overviewGeneralStats').textContent = `${totalPoints} punten totaal`;
     
     // Update most daily wins (milka bar)
-    const dailyWinsLeader = dailyWinsRanking[0];
-    document.getElementById('overviewDailyWinsWinner').textContent = dailyWinsLeader?.name || '-';
-    const dailyWins = dailyWinsLeader ? dailyWinsLeader.dailyWins : 0;
+    const dailyWinsNamesHtml = dailyWinsLeaders.map(p => p.name).join('<br>');
+    document.getElementById('overviewDailyWinsWinner').innerHTML = dailyWinsNamesHtml || '-';
+    const dailyWins = dailyWinsLeaders.length > 0 ? dailyWinsLeaders[0].dailyWins : 0;
     document.getElementById('overviewDailyWinsStats').textContent = `${dailyWins} dagoverwinning${dailyWins !== 1 ? 'en' : ''}`;
     
-    // Calculate biggest daily improvement (green arrow)
+    // No need for separate stage winners - the 4th jersey is biggest improver, not stage winner
+    
+    // Calculate biggest daily improvement (green arrow) - could also have multiple tied improvers
     const biggestImprover = calculateBiggestImprovement();
     const improverElement = document.getElementById('biggestImproverName');
     const improverStatsElement = document.getElementById('overviewImproverStats');
     
     if (biggestImprover) {
-        improverElement.textContent = biggestImprover.name;
+        improverElement.innerHTML = biggestImprover.name; // Already contains line breaks from calculateBiggestImprovement
         const improvementText = biggestImprover.improvement > 0 ? 
             `Gestegen ${biggestImprover.improvement} positie${biggestImprover.improvement !== 1 ? 's' : ''}` :
             'Geen stijging';
@@ -572,21 +626,29 @@ function calculateBiggestImprovement() {
     const rankingData = getRankingChanges();
     
     let biggestImprovement = 0;
-    let improverName = null;
+    let improvers = [];
     
-    // Find the participant with the biggest negative position change (moved up the most)
+    // Find ALL participants with the biggest improvement
     rankingData.forEach(participant => {
         const latestStage = participant.stages[participant.stages.length - 1];
         if (latestStage && latestStage.positionChange !== undefined) {
             const improvement = -latestStage.positionChange; // Convert to positive for "moved up"
             if (improvement > biggestImprovement) {
                 biggestImprovement = improvement;
-                improverName = participant.name;
+                improvers = [participant.name];
+            } else if (improvement === biggestImprovement && improvement > 0) {
+                improvers.push(participant.name);
             }
         }
     });
     
-    return biggestImprovement > 0 ? { name: improverName, improvement: biggestImprovement } : null;
+    if (biggestImprovement > 0) {
+        const limitedImprovers = improvers.slice(0, 3); // Max 3 names
+        const improverNames = limitedImprovers.join('<br>');
+        return { name: improverNames, improvement: biggestImprovement };
+    }
+    
+    return null;
 }
 
 // Excel View functies verwijderd

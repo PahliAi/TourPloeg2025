@@ -747,7 +747,7 @@ table td.dagoverwinningen-column {
 
 .overview-jersey .winner-name {
     color: white;
-    font-size: 1em;
+    font-size: 0.9em;
     font-weight: bold;
     text-shadow: 0 4px 15px rgba(0, 0, 0, 0.7);
     margin-top: 10px;
@@ -757,8 +757,10 @@ table td.dagoverwinningen-column {
     bottom: 15px;
     left: 50%;
     transform: translateX(-50%);
-    width: 90%;
-    line-height: 1.2;
+    width: 95%;
+    line-height: 1.1;
+    overflow-wrap: break-word;
+    word-break: break-word;
 }
 
 /* Mobile Responsive */
@@ -775,7 +777,14 @@ table td.dagoverwinningen-column {
     .overview-jersey { min-height: 100px; }
     .overview-jersey img { max-width: 60%; max-height: 50%; }
     .overview-jersey .winner-stats { font-size: 0.7em; top: 8px; width: 95%; }
-    .overview-jersey .winner-name { font-size: 0.8em; bottom: 8px; width: 95%; }
+    .overview-jersey .winner-name { 
+        font-size: 0.75em; 
+        bottom: 8px; 
+        width: 98%; 
+        line-height: 1.0;
+        overflow-wrap: break-word;
+        word-break: break-word;
+    }
     .matrix-scroll { font-size: 0.7em; }
     .table-scroll { font-size: 0.8em; }
     .podium-places { flex-direction: column; align-items: center; }
