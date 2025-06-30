@@ -1,153 +1,228 @@
 # 🚴‍♂️ Tour de France Poule
 
-Een moderne webapplicatie voor het beheren van je Tour de France wedpools. Upload één Excel bestand en de applicatie berekent automatisch alle scores, dagwinnaars en klassementen.
+Een professionele webapplicatie voor het beheren van Tour de France fantasy sports leagues. Volledig Excel-gedreven met geavanceerde scoring algoritmes en multi-jaar historie ondersteuning.
 
-## ✨ Features
+## ✨ Hoofdfeatures
 
-- **📊 Excel Import**: Upload één Excel bestand met alle data
-- **🏆 Live Scoring**: Automatische berekening van alle punten en klassementen
-- **🔵🟡 Jersey Tracking**: Dagwinnaars (blauw) en klassement leiders (geel)
-- **📱 Responsive Design**: Werkt perfect op desktop, tablet en mobile
-- **📈 Realtime Updates**: Instant updates bij nieuwe etappe uitslagen
-- **🎯 Multiple Views**: Deelnemers, renners, matrix en Excel-style weergave
+- **📊 Excel-gedreven data management** met automatische parsing en validatie
+- **🏆 Real-time scoring systeem** met dynamische punt berekeningen  
+- **📚 Multi-jaar historie** voor voorgaande Tour de France seizoenen
+- **🚫 Uitvallers tracking** met visuele status indicators
+- **🎯 Automatische cache-busting** voor GitHub Pages deployment
+- **📱 Volledig responsive** ontwerp voor alle apparaten
+- **🔧 Robuuste error handling** met gedetailleerde console logging
 
 ## 🚀 Quick Start
 
-1. **Open de applicatie**: [Live Demo](https://pahliai.github.io/TourPloeg2025) of open `index.html` lokaal
-2. **Download voorbeeld**: Ga naar Admin tab → Download Voorbeeld Excel
-3. **Upload je data**: Vul het Excel bestand in en upload
+### Live Demo
+**🌐 [Tour de France Poule - Live](https://pahliai.github.io/Tourploeg/Claude/)**
 
-## 📁 Project Structuur
+### Lokaal Gebruik
+1. **Clone repository**: `git clone <repo-url>`
+2. **Open**: `index.html` in moderne browser
+3. **Upload Excel**: Gebruik Upload tab of plaats `tdf-current.xlsx` in root
+
+## 📁 Project Architectuur
 
 ```
-tour-poule/
-├── index.html          # Hoofdpagina
-├── css/
-│   └── styles.css      # Alle styling
+/
+├── index.html              # Single Page Application (301 lijnen)
+├── css/styles.css          # Complete styling systeem (642 lijnen)  
 ├── js/
-│   ├── app.js          # Hoofd applicatie logica
-│   ├── excel-handler.js # Excel import/export
-│   └── ui-components.js # UI tabellen en componenten
-└── README.md
+│   ├── app.js             # Core applicatie logica (940 lijnen)
+│   ├── excel-handler.js   # Excel parsing & processing (864 lijnen)
+│   ├── excel-persistence.js # Auto-loading & cache systeem (479 lijnen)
+│   └── ui-components.js   # Tabel rendering & UI (424 lijnen)
+├── tdf-current.xlsx       # Huidige jaar data
+├── tdf-2024.xlsx         # Historische jaar data
+└── *.png                 # UI theme assets
 ```
 
-## 📊 Excel Bestand Structuur
+**Totaal**: 3,650+ lijnen hoogwaardige, gestructureerde code
 
-Het Excel bestand moet de volgende tabs bevatten:
+## 📊 Excel Data Structuur
 
-### 1. **Renners** (Tab 1)
+### Verplichte Werkbladen
+
+#### 1. **Renners** (Master Registry)
 ```
-Renners
-Tadej Pogačar
-Jonas Vingegaard
-Remco Evenepoel
+Column A: Renner Namen    | Column B: Team Namen
+Tadej Pogačar            | UAE Team Emirates  
+Jonas Vingegaard         | Team Jumbo-Visma
+Remco Evenepoel         | Soudal Quick-Step
+...                     | ...
+```
+
+#### 2. **Deelnemers** (Participant Teams)
+```
+Row 1:    [Participant Namen als headers]
+Row 2-13: [Elke participant selecteert 12 renners]
+```
+
+#### 3. **Huidig** (Stage Results) 
+**Kritieke structuur**:
+- **Rows 1**: Headers (Positie, Etappe-1, Etappe-2, ..., Eind)
+- **Rows 2-5**: Etappe metadata (Datum, Route, Afstand, Type)
+- **Rows 6-15**: Top 10 stage finishers (Positions 1-10)
+- **Rows 16-19**: Jersey holders (Geel, Groen, Wit, Bolletjes)
+- **Columns B:V**: Regular stages (21 etappes)
+- **Columns W:X**: Final classification (W=posities, X=renner namen)
+
+#### 4. **Uitvallers** (Dropouts) - Optioneel
+```
+Column A: Uitgevallen Renners
+Fabio Jakobsen
+Caleb Ewan
 ...
 ```
 
-### 2. **Deelnemers** (Tab 2)
-```
-Adriaan Mutter    | Jan de Vries      | Peter Janssen
-Tadej Pogačar     | Jonas Vingegaard  | Remco Evenepoel
-Jonas Vingegaard  | Tadej Pogačar     | Wout van Aert
-...               | ...               | ...
-(12 renners)      | (12 renners)      | (12 renners)
-```
+#### 5. **Etappe punten** (Custom Scoring) - Optioneel
+Override default punt schema voor etappes
 
-### 3. **Etappe uitslagen** (Tab 3)
-```
-        | Etappe-1       | Etappe-2
-1       | Mark Cavendish | Jasper Philipsen
-2       | Jasper Philipsen | Mark Cavendish
-...     | ...            | ...
-10      | Jonas Vingegaard | Adam Yates
-geel    | Tadej Pogačar  | Tadej Pogačar
-groen   | Mark Cavendish | Mark Cavendish
-wit     | Remco Evenepoel | Remco Evenepoel
-bolletjes | Richard Carapaz | Richard Carapaz
-```
+#### 6. **Eindklassement punten** (Final Classification) - Optioneel  
+Custom punt schema voor eindstand
 
-### 4. **Etappe punten** (Optioneel)
-```
-Categorie | Positie | Punten
-Etappe    | 1       | 30
-Etappe    | 2       | 15
-...       | ...     | ...
-Trui      | Geel    | 10
-Trui      | Groen   | 5
-```
+### Excel Vereisten
+✅ **Data validatie**: Dropdown lists verwijzend naar Renners tab  
+✅ **Consistente naming**: Exacte spelling across alle werkbladen  
+✅ **Vaste row structuur**: Voor automatische parsing  
+✅ **Nederlandse tab namen**: Exact zoals gespecificeerd  
 
-## 🎯 Scoring Systeem
+## 🎯 Geavanceerd Scoring Systeem
 
-### Etappe Punten
-- **1e plaats**: 30 punten
-- **2e plaats**: 15 punten  
-- **3e plaats**: 12 punten
-- **4e-10e plaats**: 9, 8, 7, 6, 5, 4, 3 punten
+### Stage Points (Per Etappe)
+- **Top 10**: 30, 15, 12, 9, 8, 7, 6, 5, 4, 3 punten
+- **Jersey bonussen**: Geel(10), Groen(5), Bolletjes(5), Wit(3)  
+- **Totaal per stage**: 122 punten (99 + 23 jerseys)
+- **Uitzondering**: Etappe 21 heeft geen jersey punten (99 punten)
 
-### Jersey Bonussen (per dag)
-- **🟡 Gele trui**: 10 punten
-- **🟢 Groene trui**: 5 punten
-- **🔴 Bolletjestrui**: 5 punten
-- **⚪ Witte trui**: 3 punten
+### Eindklassement (Final Classification)
+- **Top 20**: 150,75,50,40,35,30,28,26,24,22,20,18,17,16,15,14,13,12,11,10
+- **Jersey winners**: Separate allocaties voor finale truien
+- **Totaal**: ~801 punten (configureerbaar via Excel)
 
-### Dagprijzen
-- **🔵 Dagwinnaar**: Deelnemer met hoogste score die etappe
-- **🟡 Gele trui**: Deelnemer die leidt in algemeen klassement
+### Mathematische Validatie
+**Verwacht totaal**: 3,340 punten  
+`(122 × 21 etappes) + 801 eindstand - 23 (geen jerseys etappe 21) = 3,340`
 
-## 🔧 Development
+## 🔧 Geavanceerde Features
 
-### Local Development
-```bash
-# Clone repository
-git clone https://github.com/PahliAi/TourPloeg2025.git
-cd TourPloeg
-
-# Open in browser (geen build process nodig)
-open index.html
+### Automatic Rider Creation
+```javascript
+// Wanneer stage results renners bevatten die niet in Renners tab staan
+if (!window.allRidersFromExcel[rennerNaam]) {
+    window.allRidersFromExcel[rennerNaam] = {
+        name: rennerNaam,
+        team: 'Onbekend',
+        points: new Array(22).fill(0),
+        status: 'active',
+        createdDynamically: true
+    };
+}
 ```
 
-### Bestandsoverzicht
-- **Voor GitHub**: `index.html`, `css/`, `js/`, `tdf.xlsx`, `README.md`
-- **Niet voor GitHub**: Referentie bestanden, screenshots, VBA macro's
+### Cache-Busting System
+```javascript
+// Alle GitHub requests bevatten timestamp parameters
+const cacheBuster = `?v=${Date.now()}`;
+const response = await fetch(repoUrl + path + cacheBuster);
+```
 
-### GitHub Pages Deployment
-1. Push naar main branch
-2. Settings → Pages → Deploy from branch → main
-3. Je app is live op: `https://pahliai.github.io/TourPloeg2025`
+### Multi-Year Historie
+- **Huidig jaar**: `tdf-current.xlsx`
+- **Historische jaren**: `tdf-{year}.xlsx` (bijv. `tdf-2024.xlsx`)
+- **Automatische detectie**: Scant beschikbare jaren 2020-huidig
 
-## 🛠️ Tech Stack
+## 🎨 UI/UX Design Patterns
 
-- **Frontend**: Vanilla HTML, CSS, JavaScript
-- **Excel Processing**: SheetJS (xlsx library)
-- **Styling**: Modern CSS met gradients en animations
-- **Responsive**: CSS Grid en Flexbox
-- **Icons**: Emoji's voor platform compatibility
+### Status Indicators
+- **Actieve renners**: 🟢 Actief (groene cirkel)
+- **Uitgevallen renners**: 🔴 Uitgevallen (rode cirkel + subtiele row highlighting)
+- **Dynamisch gecreëerd**: Console logging voor missing riders
 
-## 📱 Browser Support
+### Professional Styling
+- **Tour de France kleuren**: Geel/blauw gradient themes
+- **Responsive tables**: Sticky headers, optimized scrolling
+- **Smooth animations**: Podium celebraties en transitions
+- **Mobile-first**: Geoptimaliseerd voor alle screen sizes
 
-- ✅ Chrome/Edge (Recommended)
-- ✅ Firefox
-- ✅ Safari
-- ✅ Mobile browsers
+## 🛠️ Development Guidelines
+
+### Code Organizatie
+1. **Separation of Concerns**: Duidelijke module boundaries
+2. **Error Handling**: Comprehensive try-catch met user feedback
+3. **Logging Strategy**: Console berichten voor Excel processing debugging
+4. **Naming Conventions**: Nederlands voor domain termen, Engels voor technical
+
+### Testing Checklist
+- [ ] Excel upload functionaliteit
+- [ ] Punt berekeningen (verifieer 3,340 totaal)
+- [ ] Rider status updates (uitvallers)
+- [ ] Historie navigatie  
+- [ ] Responsive layout
+- [ ] Console error monitoring
+
+### Performance Optimalisaties
+- **Efficiënte array operaties**: Minimale DOM updates
+- **Strategic caching**: localStorage en garbage collection
+- **GitHub Pages optimized**: CDN caching met proper invalidation
+
+## 🚀 Deployment
+
+### GitHub Pages Setup
+1. **Auto-loading**: Plaats `tdf-current.xlsx` in repository root
+2. **Historic data**: Voeg `tdf-{year}.xlsx` bestanden toe voor multi-jaar support
+3. **Cache strategy**: Bestanden served met timestamp parameters
+4. **Branch**: Deploy van `main` branch
+
+### Production Ready
+✅ **Mature codebase**: 3,650+ lijnen gestructureerde code  
+✅ **Robust error handling**: Comprehensive Excel processing validation  
+✅ **Professional UI**: Tour de France themed design patterns  
+✅ **Browser compatibility**: Modern browsers, mobile optimized  
+✅ **GitHub Pages ready**: Automatic deployment en cache management  
+
+## 🔒 Security & Performance
+
+### Security Features
+- **Client-side only**: Geen server-side vulnerabilities
+- **File validation**: Excel structuur verificatie voor processing
+- **XSS Prevention**: Gesanitized data rendering
+- **CORS Compliance**: GitHub raw file access patterns
+
+### Browser Compatibiliteit
+- ✅ **Chrome/Edge** (Recommended)
+- ✅ **Firefox** 
+- ✅ **Safari**
+- ✅ **Mobile browsers** (iOS/Android)
 
 ## 🤝 Contributing
 
-1. Fork het project
-2. Maak een feature branch (`git checkout -b feature/nieuwe-functie`)
-3. Commit je changes (`git commit -m 'Voeg nieuwe functie toe'`)
-4. Push naar branch (`git push origin feature/nieuwe-functie`)
-5. Open een Pull Request
+1. **Fork** het project
+2. **Create feature branch**: `git checkout -b feature/nieuwe-functie`
+3. **Test thoroughly**: Excel processing en UI updates
+4. **Commit changes**: `git commit -m 'Add: nieuwe functie'`
+5. **Push branch**: `git push origin feature/nieuwe-functie`
+6. **Open Pull Request**: Met gedetailleerde beschrijving
+
+## 📚 Documentation
+
+- **[CLAUDE.md](CLAUDE.md)**: Comprehensive development guide voor Claude Code
+- **Console Logging**: Gedetailleerde debug informatie tijdens Excel processing  
+- **Code Comments**: Extensive inline documentation
+- **Architecture Patterns**: Clear separation of concerns en modulaire design
 
 ## 📄 License
 
-Dit project is gelicenseerd onder de MIT License - zie [LICENSE](LICENSE) voor details.
+MIT License - Zie [LICENSE](LICENSE) voor details.
 
 ## 🙏 Acknowledgments
 
-- SheetJS voor Excel processing
-- Tour de France voor de inspiratie
-- Alle fietsliefhebbers die wedpools organiseren
+- **SheetJS**: Excel processing capabilities
+- **Tour de France**: Inspiratie en data structuur
+- **Fantasy Sports Community**: Feature requirements en feedback
+- **Claude Code**: Development assistance en code optimization
 
 ---
 
-**Happy cycling! 🚴‍♂️🏆**
+**🚴‍♂️ Professional Fantasy Sports - Powered by Excel 🏆**
