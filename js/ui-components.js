@@ -437,8 +437,8 @@ function updatePodiumContent(type, ranking, scoreType) {
             </div>
         `;
         
-        // Move to next position (simple 1,2,3 not Olympic-style)
-        position++;
+        // Update position based on how many participants were in this score group (Dutch/European style)
+        position += group.participants.length;
         positionCount++;
     }
     
