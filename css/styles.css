@@ -379,12 +379,11 @@ table th, th {
     padding: 2px 4px !important;
 }
 
-/* Sticky second column (Deelnemer/Name) for all tables */
-html body div.container div.card div.table-container table td:nth-child(2),
-html body div.container div.card div.table-scroll table td:nth-child(2),
-html body div.container div.card div.table-container table th:nth-child(2),
-html body div.container div.card div.table-scroll table th:nth-child(2),
-table td:nth-child(2), table th:nth-child(2) {
+/* Sticky second column (Deelnemer/Name) for most tables, but not Equipes */
+html body div.container div.card div.table-container table:not(.matrix-table) td:nth-child(2),
+html body div.container div.card div.table-scroll table:not(.matrix-table) td:nth-child(2),
+html body div.container div.card div.table-container table:not(.matrix-table) th:nth-child(2),
+html body div.container div.card div.table-scroll table:not(.matrix-table) th:nth-child(2) {
     position: sticky !important;
     left: 0 !important;
     z-index: 15 !important;
@@ -392,10 +391,28 @@ table td:nth-child(2), table th:nth-child(2) {
     border-right: 2px solid #a0a0a0 !important;
 }
 
-/* Header of second column gets highest z-index */
-html body div.container div.card div.table-container table th:nth-child(2),
-html body div.container div.card div.table-scroll table th:nth-child(2),
-table th:nth-child(2) {
+/* Header of second column gets highest z-index for non-matrix tables */
+html body div.container div.card div.table-container table:not(.matrix-table) th:nth-child(2),
+html body div.container div.card div.table-scroll table:not(.matrix-table) th:nth-child(2) {
+    z-index: 25 !important;
+    background: linear-gradient(135deg, #e8e8e8, #d8d8d8) !important;
+}
+
+/* Sticky first column for Equipes table only */
+.matrix-table td:nth-child(1),
+.matrix-table th:nth-child(1) {
+    position: sticky !important;
+    left: 0 !important;
+    z-index: 15 !important;
+    background: linear-gradient(135deg, #f8f8f8, #f0f0f0) !important;
+    border-right: 2px solid #a0a0a0 !important;
+    writing-mode: initial !important;
+    text-orientation: initial !important;
+    text-align: left !important;
+}
+
+/* Header of first column gets highest z-index for matrix table */
+.matrix-table th:nth-child(1) {
     z-index: 25 !important;
     background: linear-gradient(135deg, #e8e8e8, #d8d8d8) !important;
 }
@@ -503,6 +520,19 @@ table .btn:hover {
     height: 140px;
     vertical-align: top;
     position: relative;
+    text-align: center;
+}
+
+/* Kolommen 2 en 3 (Status en Totaal) ook 90 graden draaien */
+.matrix-table th:nth-child(2),
+.matrix-table th:nth-child(3) {
+    writing-mode: vertical-lr !important;
+    text-orientation: mixed !important;
+    text-align: center !important;
+    min-width: 45px !important;
+    max-width: 45px !important;
+    height: 140px !important;
+    padding: 15px 4px 15px 4px !important;
 }
 
 .matrix-table td {
