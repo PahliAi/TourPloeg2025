@@ -372,11 +372,32 @@ table th, th {
     font-weight: bold !important;
     position: sticky !important;
     top: 0 !important;
-    z-index: 10 !important;
+    z-index: 20 !important;
     border: 1px solid #a0a0a0 !important;
     text-shadow: none !important;
     font-size: 0.8em !important;
     padding: 2px 4px !important;
+}
+
+/* Sticky second column (Deelnemer/Name) for all tables */
+html body div.container div.card div.table-container table td:nth-child(2),
+html body div.container div.card div.table-scroll table td:nth-child(2),
+html body div.container div.card div.table-container table th:nth-child(2),
+html body div.container div.card div.table-scroll table th:nth-child(2),
+table td:nth-child(2), table th:nth-child(2) {
+    position: sticky !important;
+    left: 0 !important;
+    z-index: 15 !important;
+    background: linear-gradient(135deg, #f8f8f8, #f0f0f0) !important;
+    border-right: 2px solid #a0a0a0 !important;
+}
+
+/* Header of second column gets highest z-index */
+html body div.container div.card div.table-container table th:nth-child(2),
+html body div.container div.card div.table-scroll table th:nth-child(2),
+table th:nth-child(2) {
+    z-index: 25 !important;
+    background: linear-gradient(135deg, #e8e8e8, #d8d8d8) !important;
 }
 
 tr:nth-child(even) {

@@ -26,10 +26,9 @@
         
         <div class="nav-tabs">
             <button class="nav-tab active" onclick="showTab('home')">🏠 Home</button>
-            <button class="nav-tab" onclick="showTab('participants')">👥 Deelnemers Score</button>
             <button class="nav-tab" onclick="showTab('riders')">🚴 Renners Score</button>
             <button class="nav-tab" onclick="showTab('matrix')">📊 Renners Gekozen</button>
-            <button class="nav-tab" onclick="showTab('daily-prizes')">🏆 Dagprijzen</button>
+            <button class="nav-tab" onclick="showTab('daily-prizes')">🏆 Classement général</button>
             <button class="nav-tab" onclick="showTab('ranking')">📈 Ranking</button>
             <button class="nav-tab" onclick="showTab('historie')">📚 Historie</button>
             <button class="nav-tab" onclick="showTab('upload')">📊 Upload</button>
@@ -150,8 +149,8 @@
             </div>
         </div>
 
-        <!-- PARTICIPANTS TAB -->
-        <div id="participants" class="tab-content">
+        <!-- PARTICIPANTS TAB (HIDDEN) -->
+        <div id="participants" class="tab-content" style="display: none !important;">
             <div class="card">
                 <h2>👥 Deelnemers Score</h2>
                 <div class="table-container">
@@ -227,7 +226,7 @@
         <!-- DAILY PRIZES TAB -->
         <div id="daily-prizes" class="tab-content">
             <div class="card">
-                <h2>🏆 Dagprijzen Overzicht</h2>
+                <h2>🏆 Classement général</h2>
                 <div class="table-container">
                     <div class="table-scroll">
                         <table>

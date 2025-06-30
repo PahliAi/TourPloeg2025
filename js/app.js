@@ -607,16 +607,19 @@ function updateTableHeaders() {
     ridersHeaderHtml += '<th>Status</th>';
     document.getElementById('ridersTableHeader').innerHTML = ridersHeaderHtml;
     
-    // Update daily prizes header
-    let dailyPrizesHeaderHtml = '<th>Rang</th><th>Deelnemer</th><th>Totaal</th>';
+    // Update daily prizes header - nieuwe volgorde: Rang, Deelnemer, Etappes 1-21, Totaal t/m 21, Eind, Totaal, Dagoverwinningen
+    let dailyPrizesHeaderHtml = '<th>Rang</th><th>Deelnemer</th>';
     for (let i = 1; i <= currentStage; i++) {
         if (i <= 21) {
             dailyPrizesHeaderHtml += `<th>Etappe ${i}</th>`;
         }
     }
+    // Voeg totaal etappes kolom toe
+    dailyPrizesHeaderHtml += '<th style="background: #e8f4fd;">Totaal Etappes</th>';
     // Voeg Eindstand kolom toe als er eindstand data is
     if (window.hasEindstandData) {
-        dailyPrizesHeaderHtml += `<th>Eind</th>`;
+        dailyPrizesHeaderHtml += `<th style="background: #ffe4b5;">Eind</th>`;
+        dailyPrizesHeaderHtml += '<th>Totaal</th>'; // Alleen totaal kolom als er eindstand data is
     }
     dailyPrizesHeaderHtml += '<th class="dagoverwinningen-column">Dagoverwinningen</th>';
     document.getElementById('dailyPrizesHeader').innerHTML = dailyPrizesHeaderHtml;

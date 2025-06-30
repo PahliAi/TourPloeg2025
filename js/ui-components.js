@@ -2,51 +2,9 @@
 
 // Table loading functions
 function loadParticipantsTable() {
-    const tbody = document.getElementById('participantsTable');
-    
-    if (participants.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: #666;">📁 Upload een ploegen bestand om te beginnen</td></tr>';
-        return;
-    }
-    
-    tbody.innerHTML = '';
-    participants.sort((a, b) => b.totalPoints - a.totalPoints);
-    
-    participants.forEach((participant, index) => {
-        const row = document.createElement('tr');
-        
-        // Count yellow jerseys (gele truien) - count stages where this participant was tied for #1
-        let yellowJerseys = 0;
-        for (let stage = 0; stage < currentStage; stage++) {
-            let maxPoints = 0;
-            
-            // First pass: find maximum points for this stage
-            participants.forEach(p => {
-                const stagePoints = p.stagePoints[stage] || 0;
-                if (stagePoints > maxPoints) {
-                    maxPoints = stagePoints;
-                }
-            });
-            
-            // Second pass: check if THIS participant has max points
-            if (maxPoints > 0) {
-                const participantPoints = participant.stagePoints[stage] || 0;
-                if (participantPoints === maxPoints) {
-                    yellowJerseys++;
-                }
-            }
-        }
-        
-        row.innerHTML = `
-            <td><strong>${index + 1}</strong></td>
-            <td>${participant.name}</td>
-            <td class="points-cell">${participant.totalPoints}</td>
-            <td class="points-cell">${participant.dailyWins} 🔵</td>
-            <td class="points-cell">${yellowJerseys} 🟡</td>
-            <td><button class="btn" style="padding: 2px 6px; font-size: 0.7em;" onclick="showParticipantDetail('${participant.name}')">Bekijk</button></td>
-        `;
-        tbody.appendChild(row);
-    });
+    // Functie is uitgeschakeld - Deelnemers Score tabel wordt niet meer gebruikt
+    // De tabel is vervangen door Classement général die meer detail bevat
+    return;
 }
 
 function loadRidersTable() {
@@ -304,6 +262,12 @@ function loadDailyPrizesTable() {
             }
         }
         
+        // Bereken totaal van alle etappes (exclusief eindstand)
+        const totalEtappes = participant.stagePoints.slice(0, 21).reduce((sum, p) => sum + (p || 0), 0);
+        
+        // Voeg kolom voor totaal etappes toe
+        stagePointsHtml += `<td class="points-cell" style="background: #e8f4fd; font-weight: bold;">${totalEtappes}</td>`;
+        
         // Voeg Eindstand kolom toe als er data is
         if (window.hasEindstandData) {
             const eindstandPoints = participant.stagePoints[21] || 0; // Index 21 = etappe 22 (Eindstand)
@@ -319,11 +283,17 @@ function loadDailyPrizesTable() {
         }
         if (!truienText) truienText = '0';
         
+        // Voeg totaal kolom alleen toe als er eindstand data is
+        let totalColumnHtml = '';
+        if (window.hasEindstandData) {
+            totalColumnHtml = `<td class="points-cell"><strong>${participant.totalPoints}</strong></td>`;
+        }
+        
         row.innerHTML = `
             <td><strong>${index + 1}</strong></td>
             <td>${participant.name}</td>
-            <td class="points-cell"><strong>${participant.totalPoints}</strong></td>
             ${stagePointsHtml}
+            ${totalColumnHtml}
             <td class="points-cell dagoverwinningen-column">${truienText}</td>
         `;
         tbody.appendChild(row);
