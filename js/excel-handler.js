@@ -1,4 +1,5 @@
 // Tour de France Poule 2024 - Excel Handler
+// Performance optimization - Templates are now defined in excel-config.js
 
 // Helper function to convert Excel date number to readable date
 function excelDateToJSDate(excelDate) {
@@ -168,7 +169,7 @@ function processExcelData(rennersData, deelnemersData, uitlagenData, etappePunte
                 window.allRidersFromExcel[riderName] = {
                     name: riderName,
                     team: teamName,
-                    points: new Array(22).fill(0),
+                    points: [...window.EMPTY_POINTS_TEMPLATE],
                     status: 'active',
                     inTeam: false // Default, wordt later geupdate
                 };
@@ -287,7 +288,7 @@ function processExcelData(rennersData, deelnemersData, uitlagenData, etappePunte
                         const rennerNaam = deelnemersData[row][col];
                         team.push({
                             name: rennerNaam,
-                            points: Array(22).fill(0), // 22 stages max (21 etappes + eindstand)
+                            points: [...window.EMPTY_POINTS_TEMPLATE], // 22 stages max (21 etappes + eindstand)
                             status: "active"
                         });
                     }
@@ -298,7 +299,7 @@ function processExcelData(rennersData, deelnemersData, uitlagenData, etappePunte
                         name: deelnemerNaam,
                         totalPoints: 0,
                         dailyWins: 0,
-                        stagePoints: Array(22).fill(0), // 22 stages max (21 etappes + eindstand)
+                        stagePoints: [...window.EMPTY_STAGE_POINTS_TEMPLATE], // 22 stages max (21 etappes + eindstand)
                         team: team
                     });
                 }
@@ -324,6 +325,7 @@ function processExcelData(rennersData, deelnemersData, uitlagenData, etappePunte
     loadRidersTable();
     loadMatrixTable();
     loadDailyPrizesTable();
+    loadRankingTable();
     updatePodiums();
     updateTableHeaders();
     
@@ -507,37 +509,63 @@ function processEtappeUitslagen(uitlagenData, etappePunten, eindklassementPunten
     });
     
     // Punten schema (default als geen aparte tab)
-    const puntenSchema = {
+    let puntenSchema = {
         1: 30, 2: 15, 3: 12, 4: 9, 5: 8,
         6: 7, 7: 6, 8: 5, 9: 4, 10: 3,
         'geel': 10, 'groen': 5, 'bolletjes': 5, 'wit': 3
     };
+    
+    // Parse etappe punten tab om punten schema uit Excel te halen
+    if (typeof etappePunten !== 'undefined' && etappePunten && etappePunten.length > 0) {
+        console.log('📊 Loading Etappe punten tab for jersey and stage scoring');
+        
+        for (let row = 1; row < etappePunten.length; row++) { // Skip header row
+            if (etappePunten[row] && etappePunten[row][0] && etappePunten[row][1]) {
+                const categorieRaw = etappePunten[row][0]; // Could be number (1, 2, 3) or string ("geel", "groen")
+                const categorie = String(categorieRaw); // Force to string for safe processing
+                const punten = parseInt(etappePunten[row][1]); // 30, 10, etc.
+                
+                console.log(`📊 Processing: "${categorie}" (${typeof categorieRaw}) → ${punten} punten`);
+                
+                if (categorie === 'geel') {
+                    puntenSchema['geel'] = punten;
+                } else if (categorie === 'groen') {
+                    puntenSchema['groen'] = punten;
+                } else if (categorie === 'bolletjes') {
+                    puntenSchema['bolletjes'] = punten;
+                } else if (categorie === 'wit') {
+                    puntenSchema['wit'] = punten;
+                } else if (!isNaN(parseInt(categorie))) {
+                    // Numeric positions: 1, 2, 3, etc.
+                    const positie = parseInt(categorie);
+                    if (positie >= 1 && positie <= 10) {
+                        puntenSchema[positie] = punten;
+                    }
+                }
+            }
+        }
+        
+        console.log('✅ Etappe punten loaded from Excel:', puntenSchema);
+    } else {
+        console.log('📊 No Etappe punten tab - using hardcoded defaults');
+    }
     
     // Parse eindklassement punten tab voor 'Eindstand' kolom
     let eindstandPunten = {};
     if (typeof eindklassementPunten !== 'undefined' && eindklassementPunten && eindklassementPunten.length > 0) {
         console.log('📊 Loading Eindklassement punten tab for Eindstand scoring');
         
-        // Parse eindklassement punten tab en map naar eindstand posities
+        // Parse eindklassement punten tab - now 2 columns: Positie | Punten
         for (let row = 1; row < eindklassementPunten.length; row++) { // Skip header row
-            if (eindklassementPunten[row] && eindklassementPunten[row][0] && eindklassementPunten[row][1] && eindklassementPunten[row][2]) {
-                const categorie = eindklassementPunten[row][0]; // Eindklassement, Trui Groen, etc.
-                const positie = eindklassementPunten[row][1]; // 1, 2, 3, etc.
-                const punten = eindklassementPunten[row][2]; // 150, 75, 50, etc.
+            if (eindklassementPunten[row] && eindklassementPunten[row][0] && eindklassementPunten[row][1]) {
+                const positieRaw = eindklassementPunten[row][0]; // Could be number (1, 2) or string ("groen 1")
+                const positie = String(positieRaw); // Force to string for safe processing
+                const punten = parseInt(eindklassementPunten[row][1]); // 150, 75, 50, etc.
                 
-                if (categorie === 'Eindklassement') {
-                    // Map numerieke posities: 1→1, 2→2, etc.
-                    eindstandPunten[positie] = punten;
-                } else if (categorie === 'Trui Groen') {
-                    // Map jersey posities: groen 1, groen 2, groen 3
-                    eindstandPunten[`groen ${positie}`] = punten;
-                } else if (categorie === 'Trui Bolletjes') {
-                    // Map jersey posities: bolletjes 1, bolletjes 2, bolletjes 3  
-                    eindstandPunten[`bolletjes ${positie}`] = punten;
-                } else if (categorie === 'Trui Wit') {
-                    // Map jersey posities: wit 1, wit 2, wit 3
-                    eindstandPunten[`wit ${positie}`] = punten;
-                }
+                console.log(`📊 Eindstand processing: "${positie}" (${typeof positieRaw}) → ${punten} punten`);
+                
+                // Direct mapping: positie → punten
+                eindstandPunten[positie] = punten;
             }
         }
         
@@ -637,7 +665,7 @@ function processRegularStageData(uitlagenData, etappeInfo, puntenSchema) {
                 window.allRidersFromExcel[rennerNaam] = {
                     name: rennerNaam,
                     team: 'Onbekend', // Unknown team
-                    points: new Array(22).fill(0),
+                    points: [...window.EMPTY_POINTS_TEMPLATE],
                     status: 'active',
                     inTeam: false,
                     createdDynamically: true
@@ -646,6 +674,7 @@ function processRegularStageData(uitlagenData, etappeInfo, puntenSchema) {
             }
             
             // Now allocate points (rider is guaranteed to exist)
+            console.log(`🏁 STAGE: "${rennerNaam}" gets ${punten} points for position ${position} (stage ${etappeInfo.stage})`);
             window.allRidersFromExcel[rennerNaam].points[stageIndex] += punten;
             window.stagePointsBreakdown[etappeInfo.stage].actualPointsAllocated += punten;
             window.actualPointsAllocated += punten;
@@ -663,26 +692,40 @@ function processRegularStageData(uitlagenData, etappeInfo, puntenSchema) {
     
     // Process jerseys (yellow, green, white, polka dots) - skip for stage 21
     if (etappeInfo.stage !== 21) {
-        const truienPosities = [
-            { name: 'geel', row: 15 },
-            { name: 'groen', row: 16 }, 
-            { name: 'wit', row: 17 },
-            { name: 'bolletjes', row: 18 }
-        ];
+        // Find jersey rows dynamically by looking at column A
+        const jerseyRows = {};
+        for (let row = 0; row < uitlagenData.length; row++) {
+            if (uitlagenData[row] && uitlagenData[row][0]) {
+                const rowLabel = uitlagenData[row][0].toString().toLowerCase().trim();
+                if (rowLabel === 'geel' || rowLabel === 'yellow') {
+                    jerseyRows['geel'] = row;
+                } else if (rowLabel === 'groen' || rowLabel === 'green') {
+                    jerseyRows['groen'] = row;
+                } else if (rowLabel === 'wit' || rowLabel === 'white') {
+                    jerseyRows['wit'] = row;
+                } else if (rowLabel === 'bolletjes' || rowLabel === 'polka' || rowLabel === 'dots') {
+                    jerseyRows['bolletjes'] = row;
+                }
+            }
+        }
         
-        truienPosities.forEach(trui => {
-            if (uitlagenData[trui.row] && uitlagenData[trui.row][etappeInfo.col]) {
-                const rennerNaam = uitlagenData[trui.row][etappeInfo.col];
+        console.log(`🏆 Jersey rows found for stage ${etappeInfo.stage}:`, jerseyRows);
+        
+        // Process each jersey type
+        Object.keys(jerseyRows).forEach(jerseyName => {
+            const row = jerseyRows[jerseyName];
+            if (uitlagenData[row] && uitlagenData[row][etappeInfo.col]) {
+                const rennerNaam = uitlagenData[row][etappeInfo.col];
                 if (rennerNaam && rennerNaam.toString().trim() !== '') {
-                    const punten = puntenSchema[trui.name] || 0;
+                    const punten = puntenSchema[jerseyName] || 0;
                     
                     // Track points for ALL riders - CREATE MISSING RIDERS DYNAMICALLY
                     if (!window.allRidersFromExcel[rennerNaam]) {
-                        console.log(`🆕 CREATING MISSING RIDER FOR JERSEY: "${rennerNaam}" for ${trui.name} jersey stage ${etappeInfo.stage}`);
+                        console.log(`🆕 CREATING MISSING RIDER FOR JERSEY: "${rennerNaam}" for ${jerseyName} jersey stage ${etappeInfo.stage}`);
                         window.allRidersFromExcel[rennerNaam] = {
                             name: rennerNaam,
                             team: 'Onbekend',
-                            points: new Array(22).fill(0),
+                            points: [...window.EMPTY_POINTS_TEMPLATE],
                             status: 'active',
                             inTeam: false,
                             createdDynamically: true
@@ -691,6 +734,7 @@ function processRegularStageData(uitlagenData, etappeInfo, puntenSchema) {
                     }
                     
                     // Allocate jersey points
+                    console.log(`🏆 JERSEY: "${rennerNaam}" gets ${punten} points for ${jerseyName} jersey (stage ${etappeInfo.stage}) [row ${row}]`);
                     window.allRidersFromExcel[rennerNaam].points[stageIndex] += punten;
                     window.stagePointsBreakdown[etappeInfo.stage].actualPointsAllocated += punten;
                     window.actualPointsAllocated += punten;
@@ -800,7 +844,7 @@ function processEindklassementData(uitlagenData, etappeInfo, eindstandPunten) {
                 window.allRidersFromExcel[rennerNaam] = {
                     name: rennerNaam,
                     team: 'Onbekend',
-                    points: new Array(22).fill(0),
+                    points: [...window.EMPTY_POINTS_TEMPLATE],
                     status: 'active',
                     inTeam: false,
                     createdDynamically: true

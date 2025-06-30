@@ -1,6 +1,6 @@
 # 🚴‍♂️ Tour de France Poule
 
-Een professionele webapplicatie voor het beheren van Tour de France fantasy sports leagues. Volledig Excel-gedreven met geavanceerde scoring algoritmes en multi-jaar historie ondersteuning.
+Een webapplicatie voor het beheren van Tour de France fantasy sports leagues. Excel-gedreven met scoring algoritmes en multi-jaar historie ondersteuning.
 
 ## ✨ Hoofdfeatures
 
@@ -38,18 +38,16 @@ Een professionele webapplicatie voor het beheren van Tour de France fantasy spor
 └── *.png                 # UI theme assets
 ```
 
-**Totaal**: 3,650+ lijnen hoogwaardige, gestructureerde code
-
 ## 📊 Excel Data Structuur
 
 ### Verplichte Werkbladen
 
 #### 1. **Renners** (Master Registry)
 ```
-Column A: Renner Namen    | Column B: Team Namen
-Tadej Pogačar            | UAE Team Emirates  
-Jonas Vingegaard         | Team Jumbo-Visma
-Remco Evenepoel         | Soudal Quick-Step
+Column A: Renner Namen
+Tadej Pogačar  
+Jonas Vingegaard
+Remco Evenepoel
 ...                     | ...
 ```
 
@@ -219,10 +217,5 @@ MIT License - Zie [LICENSE](LICENSE) voor details.
 ## 🙏 Acknowledgments
 
 - **SheetJS**: Excel processing capabilities
-- **Tour de France**: Inspiratie en data structuur
-- **Fantasy Sports Community**: Feature requirements en feedback
+- **EJM productions**: Inspiratie en geestelijk vader
 - **Claude Code**: Development assistance en code optimization
-
----
-
-**🚴‍♂️ Professional Fantasy Sports - Powered by Excel 🏆**

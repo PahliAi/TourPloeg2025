@@ -1,10 +1,7 @@
 # CLAUDE.md
 
-This file provides comprehensive guidance to Claude Code when working with this Tour de France fantasy sports application.
-
-## Project Overview
-
-**Tour de France Poule** is a sophisticated web-based fantasy sports application for Tour de France betting pools. Built as a modern single-page application using pure HTML, CSS, and JavaScript with advanced Excel integration.
+**Tour de France Poule** is a web-based fantasy sports application for Tour de France betting pool with a grand prize of a 270 grams Milka bar.
+The webapp is built as a single-page application using pure HTML, CSS, and JavaScript with Excel integration.
 
 ### Core Functionality
 - **Excel-driven data management** with automatic parsing and validation
@@ -43,7 +40,6 @@ This file provides comprehensive guidance to Claude Code when working with this 
 
 #### 1. Renners (Riders)
 - **Column A**: Rider names (exact spelling critical)
-- **Column B**: Team names
 - **Purpose**: Master rider registry for point allocation
 
 #### 2. Deelnemers (Participants)  
@@ -227,5 +223,3 @@ const response = await fetch(repoUrl + path + cacheBuster);
 - **File validation**: Excel structure verification before processing
 - **XSS Prevention**: Sanitized data rendering
 - **CORS Compliance**: GitHub raw file access patterns
-
-This codebase represents a mature, production-ready fantasy sports application with robust error handling, comprehensive Excel integration, and professional UI/UX design patterns.

@@ -90,6 +90,7 @@ async function checkForGitHubExcel() {
         } else {
             // Local testing fallback - try relative path
             console.log('🏠 Local testing detected - trying relative path');
+            console.log('🏠 Current URL:', currentUrl);
             repoUrl = './';
         }
         
@@ -97,7 +98,12 @@ async function checkForGitHubExcel() {
             try {
                 // Add cache busting parameter
                 const cacheBuster = `?v=${Date.now()}`;
-                const response = await fetch(repoUrl + path + cacheBuster);
+                const fullUrl = repoUrl + path + cacheBuster;
+                console.log(`🔍 Trying to fetch: ${fullUrl}`);
+                
+                const response = await fetch(fullUrl);
+                console.log(`📡 Response status: ${response.status} for ${path}`);
+                
                 if (response.ok) {
                     console.log(`📊 Found Excel file at: ${path} (cache-busted)`);
                     

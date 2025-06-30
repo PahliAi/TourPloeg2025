@@ -26,6 +26,7 @@
             <button class="nav-tab" onclick="showTab('riders')">🚴 Renners Score</button>
             <button class="nav-tab" onclick="showTab('matrix')">📊 Renners Gekozen</button>
             <button class="nav-tab" onclick="showTab('daily-prizes')">🏆 Dagprijzen</button>
+            <button class="nav-tab" onclick="showTab('ranking')">📈 Ranking</button>
             <button class="nav-tab" onclick="showTab('historie')">📚 Historie</button>
             <button class="nav-tab" onclick="showTab('upload')">📊 Upload</button>
         </div>
@@ -216,6 +217,36 @@
             </div>
         </div>
 
+        <!-- RANKING TAB -->
+        <div id="ranking" class="tab-content">
+            <div class="card">
+                <h2>📈 Ranking Progressie</h2>
+                <p style="margin-bottom: 15px; color: #666; font-size: 0.9em;">
+                    <strong>Legenda:</strong> Eerste etappe toont positie, daarna positieverandering: 
+                    <span style="color: #28a745; font-weight: bold;">-4 Gestegen</span>, 
+                    <span style="color: #dc3545; font-weight: bold;">+7 Gedaald</span>, 
+                    <span style="color: #6c757d; font-weight: bold;">0 Gelijk</span>
+                </p>
+                <div class="table-container">
+                    <div class="table-scroll">
+                        <table>
+                            <thead id="rankingTableHeader">
+                                <tr>
+                                    <th>Deelnemer</th>
+                                    <th>Et 1</th>
+                                    <th>Et 2</th>
+                                    <th>Huidig</th>
+                                </tr>
+                            </thead>
+                            <tbody id="rankingTable">
+                                <!-- Filled by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- HISTORIE TAB -->
         <div id="historie" class="tab-content">
             <div class="card">
@@ -294,6 +325,8 @@
     </div>
 
     <!-- JavaScript -->
+    <script src="js/excel-config.js"></script>
+    <script src="js/excel-parser.js"></script>
     <script src="js/app.js"></script>
     <script src="js/excel-handler.js"></script>
     <script src="js/excel-persistence.js"></script>

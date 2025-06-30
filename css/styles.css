@@ -1,5 +1,56 @@
 /* Tour de France Poule 2024 - Styles */
 
+/* CSS Custom Properties for theming and consistency */
+:root {
+    /* Colors */
+    --primary-yellow: #FFD700;
+    --primary-orange: #FF6B35;
+    --primary-blue: #667eea;
+    --secondary-purple: #764ba2;
+    --accent-pink: #f093fb;
+    
+    /* Tour de France gradients */
+    --gradient-header: linear-gradient(135deg, var(--primary-yellow), var(--primary-orange), #FF8C00);
+    --gradient-bg: linear-gradient(135deg, var(--primary-blue) 0%, var(--secondary-purple) 50%, var(--accent-pink) 100%);
+    --gradient-card: linear-gradient(135deg, rgba(255,255,255,0.95), rgba(255,255,255,0.85));
+    
+    /* Status colors */
+    --status-active: #28a745;
+    --status-dropped: #dc3545;
+    --status-warning: #ffc107;
+    
+    /* Spacing */
+    --spacing-xs: 5px;
+    --spacing-sm: 10px;
+    --spacing-md: 15px;
+    --spacing-lg: 20px;
+    --spacing-xl: 30px;
+    
+    /* Typography */
+    --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    --font-size-sm: 0.8em;
+    --font-size-base: 1em;
+    --font-size-lg: 1.1em;
+    --font-size-xl: 1.2em;
+    --font-size-xxl: 2.2em;
+    
+    /* Border radius */
+    --border-radius-sm: 5px;
+    --border-radius-md: 10px;
+    --border-radius-lg: 20px;
+    --border-radius-xl: 30px;
+    
+    /* Shadows */
+    --shadow-light: 0 2px 10px rgba(0,0,0,0.1);
+    --shadow-medium: 0 4px 20px rgba(0,0,0,0.15);
+    --shadow-heavy: 0 8px 32px rgba(0,0,0,0.3);
+    
+    /* Transitions */
+    --transition-fast: 0.2s ease;
+    --transition-medium: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-slow: 0.6s ease-out;
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -7,27 +58,27 @@
 }
 
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+    font-family: var(--font-family);
+    background: var(--gradient-bg);
     min-height: 100vh;
     color: #2c3e50;
 }
 
 /* Header */
 .header {
-    background: linear-gradient(135deg, #FFD700, #FF6B35, #FF8C00);
-    padding: 20px 20px;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    background: var(--gradient-header);
+    padding: var(--spacing-lg) var(--spacing-lg);
+    box-shadow: var(--shadow-heavy);
     backdrop-filter: blur(10px);
     border-bottom: none;
 }
 
 .header h1 {
     color: white;
-    font-size: 2.2em;
+    font-size: var(--font-size-xxl);
     text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
     text-align: center;
-    margin-bottom: 10px;
+    margin-bottom: var(--spacing-sm);
 }
 
 /* Navigation */
@@ -35,8 +86,8 @@ body {
     display: flex;
     justify-content: center;
     flex-wrap: wrap;
-    gap: 5px;
-    margin-top: 15px;
+    gap: var(--spacing-xs);
+    margin-top: var(--spacing-md);
 }
 
 .nav-tab {
@@ -44,10 +95,10 @@ body {
     color: white;
     border: 2px solid rgba(255,255,255,0.2);
     padding: 12px 24px;
-    border-radius: 30px;
+    border-radius: var(--border-radius-xl);
     cursor: pointer;
     font-weight: 600;
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all var(--transition-medium);
     font-size: 0.95em;
     backdrop-filter: blur(10px);
 }
@@ -457,6 +508,25 @@ table td.dagoverwinningen-column {
     border: 1px solid #d0d0d0 !important;
 }
 
+/* Ranking progression colors */
+.ranking-up {
+    background: rgba(40, 167, 69, 0.1) !important;
+    color: #28a745 !important;
+    font-weight: bold !important;
+}
+
+.ranking-down {
+    background: rgba(220, 53, 69, 0.1) !important;
+    color: #dc3545 !important;
+    font-weight: bold !important;
+}
+
+.ranking-same {
+    background: rgba(108, 117, 125, 0.1) !important;
+    color: #6c757d !important;
+    font-weight: bold !important;
+}
+
 /* Modal */
 .detail-view {
     position: fixed;
@@ -469,6 +539,8 @@ table td.dagoverwinningen-column {
     justify-content: center;
     align-items: center;
     z-index: 1000;
+    padding: 20px;
+    box-sizing: border-box;
 }
 
 .detail-content {
@@ -479,6 +551,9 @@ table td.dagoverwinningen-column {
     max-height: 90%;
     overflow-y: auto;
     position: relative;
+    width: 100%;
+    height: auto;
+    max-height: calc(100vh - 40px);
 }
 
 .close-btn {
@@ -618,17 +693,54 @@ table td.dagoverwinningen-column {
         font-size: 0.8em !important;
     }
     
-    /* Matrix table mobile adjustments */
+    /* Matrix table mobile adjustments - ULTRA COMPACT */
     .matrix-table th {
-        font-size: 0.65em;
-        min-width: 32px;
-        max-width: 32px;
-        padding: 12px 2px 12px 2px;
-        height: 120px;
-        vertical-align: top;
+        font-size: 0.55em !important;
+        min-width: 25px !important;
+        max-width: 25px !important;
+        padding: 8px 1px 8px 1px !important;
+        height: 100px !important;
+        vertical-align: top !important;
+        writing-mode: vertical-lr !important;
+        text-orientation: mixed !important;
     }
     .matrix-table td {
-        padding: 3px 1px;
+        padding: 2px 0px !important;
+        font-size: 0.7em !important;
+        min-width: 25px !important;
+        max-width: 25px !important;
+        text-align: center !important;
+    }
+    
+    /* First 3 columns (Renner, Status, Totaal) remain readable */
+    .matrix-table th:nth-child(1), 
+    .matrix-table th:nth-child(2), 
+    .matrix-table th:nth-child(3) {
+        writing-mode: initial !important;
+        text-orientation: initial !important;
+        min-width: auto !important;
+        max-width: none !important;
+        height: auto !important;
+        padding: 4px 6px !important;
+        font-size: 0.75em !important;
+    }
+    
+    .matrix-table td:nth-child(1) { 
+        min-width: 80px !important; 
+        max-width: none !important;
+        text-align: left !important;
+        padding: 3px 6px !important;
+    }
+    .matrix-table td:nth-child(2) { 
+        min-width: 30px !important; 
+        max-width: 30px !important;
+        text-align: center !important;
+    }
+    .matrix-table td:nth-child(3) { 
+        min-width: 35px !important; 
+        max-width: 35px !important;
+        text-align: center !important;
+        font-weight: bold !important;
     }
     
     /* Smaller cards on mobile */
@@ -639,5 +751,101 @@ table td.dagoverwinningen-column {
     .podium-place { 
         min-width: 120px; 
         padding: 15px;
+    }
+    
+    /* CRITICAL: Mobile modal fixes */
+    .detail-view {
+        padding: 10px !important;
+        align-items: flex-start !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+    }
+    
+    .detail-content {
+        margin: 10px 0 !important;
+        padding: 20px !important;
+        max-width: 95% !important;
+        width: 95% !important;
+        max-height: none !important;
+        height: auto !important;
+        min-height: auto !important;
+        overflow-y: visible !important;
+        border-radius: 10px !important;
+        position: relative !important;
+        box-sizing: border-box !important;
+    }
+    
+    /* Mobile modal table improvements */
+    .detail-content .table-container {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        max-width: 100% !important;
+        border-radius: 5px !important;
+    }
+    
+    .detail-content .table-scroll {
+        max-height: 400px !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+    }
+    
+    .detail-content table th,
+    .detail-content table td {
+        padding: 3px 4px !important;
+        font-size: 0.75em !important;
+        white-space: nowrap !important;
+    }
+    
+    /* Close button mobile positioning */
+    .close-btn {
+        top: 10px !important;
+        right: 15px !important;
+        width: 30px !important;
+        height: 30px !important;
+        font-size: 1.1em !important;
+        z-index: 1001 !important;
+    }
+    
+    /* Ultra compact ranking table for mobile - OPTIMIZED */
+    #ranking .table-container {
+        max-width: 100% !important;
+        margin: 0 !important;
+        border-radius: 5px !important;
+    }
+    
+    #ranking table {
+        table-layout: fixed !important;
+        width: 100% !important;
+        font-size: 0.7em !important;
+    }
+    
+    #ranking th, #ranking td {
+        padding: 2px 2px !important;
+        font-size: 0.7em !important;
+        text-align: center !important;
+        white-space: nowrap !important;
+    }
+    
+    /* Ranking table mobile column widths - ULTRA COMPACT */
+    #ranking th:nth-child(1), #ranking td:nth-child(1) { 
+        width: 30% !important; 
+        text-align: left !important;
+        padding-left: 4px !important;
+        font-size: 0.65em !important;
+    }
+    
+    /* All stage columns get equal tiny width */
+    #ranking th:nth-child(n+2), #ranking td:nth-child(n+2) { 
+        width: auto !important;
+        min-width: 28px !important;
+        max-width: 32px !important;
+        padding: 2px 1px !important;
+        font-size: 0.65em !important;
+    }
+    
+    /* Mobile ranking legend */
+    #ranking p {
+        font-size: 0.75em !important;
+        margin-bottom: 10px !important;
     }
 }

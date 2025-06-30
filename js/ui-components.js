@@ -151,6 +151,80 @@ function loadMatrixTable() {
     });
 }
 
+function loadRankingTable() {
+    const tbody = document.getElementById('rankingTable');
+    
+    if (participants.length === 0 || currentStage === 1) {
+        tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; padding: 40px; color: #666;">📁 Rankings zijn beschikbaar na etappe 2</td></tr>';
+        return;
+    }
+    
+    const rankingProgression = getRankingChanges();
+    tbody.innerHTML = '';
+    
+    // Update table header dynamically based on current stage
+    const thead = document.getElementById('rankingTableHeader');
+    let headerHtml = `
+        <tr>
+            <th>Deelnemer</th>
+            <th style="background: #ffe4b5;">Et 1</th>`;
+    
+    // Add relative change columns for stages 2 onwards
+    for (let stage = 2; stage <= currentStage; stage++) {
+        headerHtml += `<th>Et ${stage}</th>`;
+    }
+    
+    // Add current ranking column if we have more than 1 stage
+    if (currentStage > 1) {
+        headerHtml += `<th style="background: #e8f4fd; font-weight: bold;">Huidig</th>`;
+    }
+    
+    headerHtml += '</tr>';
+    thead.innerHTML = headerHtml;
+    
+    // Build table rows
+    rankingProgression.forEach(participant => {
+        const row = document.createElement('tr');
+        
+        let cellsHtml = `<td><strong>${participant.name}</strong></td>`;
+        
+        participant.stages.forEach((stageData, index) => {
+            if (index === 0) {
+                // First stage - show position number
+                cellsHtml += `<td class="points-cell" style="background: #ffe4b5;"><strong>${stageData.position}</strong></td>`;
+            } else {
+                // Subsequent stages - show relative change
+                let changeText = '';
+                let changeClass = '';
+                
+                if (stageData.positionChange < 0) {
+                    // Moved up (negative change - better position)
+                    changeText = `${stageData.positionChange}`;
+                    changeClass = 'ranking-up';
+                } else if (stageData.positionChange > 0) {
+                    // Moved down (positive change - worse position)
+                    changeText = `+${stageData.positionChange}`;
+                    changeClass = 'ranking-down';
+                } else {
+                    // No change
+                    changeText = '0';
+                    changeClass = 'ranking-same';
+                }
+                
+                cellsHtml += `<td class="points-cell ${changeClass}" title="Positie ${stageData.position} (${changeText})">${changeText}</td>`;
+            }
+        });
+        
+        // Add current ranking column
+        if (currentStage > 1) {
+            cellsHtml += `<td class="points-cell" style="background: #e8f4fd; font-weight: bold;"><strong>${participant.currentRanking}</strong></td>`;
+        }
+        
+        row.innerHTML = cellsHtml;
+        tbody.appendChild(row);
+    });
+}
+
 function loadDailyPrizesTable() {
     const tbody = document.getElementById('dailyPrizesTable');
     
@@ -379,12 +453,13 @@ function showParticipantDetail(participantName) {
         <h2>🚴‍♂️ Ploeg van ${participantName}</h2>
         <p><strong>Totaal: ${participant.totalPoints} punten | Dagoverwinningen: ${participant.dailyWins}</strong></p>
         <div class="table-container">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Renner</th>
-                        <th>Team</th>
-                        <th>Totaal</th>`;
+            <div class="table-scroll">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Renner</th>
+                            <th>Team</th>
+                            <th>Totaal</th>`;
     
     for (let i = 1; i <= currentStage; i++) {
         teamHtml += `<th>Et ${i}</th>`;
@@ -412,14 +487,37 @@ function showParticipantDetail(participantName) {
         `;
     });
     
-    teamHtml += '</tbody></table></div>';
+    teamHtml += '</tbody></table></div></div>';
     
     document.getElementById('detailContent').innerHTML = teamHtml;
-    document.getElementById('detailView').style.display = 'flex';
+    
+    // Mobile-friendly modal opening
+    const detailView = document.getElementById('detailView');
+    detailView.style.display = 'flex';
+    
+    // Prevent body scroll on mobile when modal is open
+    document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.width = '100%';
+    
+    // Scroll to top of modal content on mobile
+    setTimeout(() => {
+        const detailContent = document.querySelector('.detail-content');
+        if (detailContent) {
+            detailContent.scrollTop = 0;
+        }
+        // Also scroll the main modal container to top
+        detailView.scrollTop = 0;
+    }, 100);
 }
 
 function closeDetailView() {
     document.getElementById('detailView').style.display = 'none';
+    
+    // Restore body scroll
+    document.body.style.overflow = '';
+    document.body.style.position = '';
+    document.body.style.width = '';
 }
 
 // Excel View functies verwijderd

@@ -4,6 +4,138 @@ let participants = [];
 let allRiders = [];
 let currentStage = 1;
 
+// Ranking history tracking - stores rankings after each stage
+let rankingHistory = []; // Array of arrays: [stage1Rankings, stage2Rankings, ...]
+
+// Performance optimization - Templates are now defined in excel-config.js
+
+// Centralized error handling
+const ErrorHandler = {
+    log: (category, message, data = null) => {
+        const timestamp = new Date().toISOString().substring(11, 19);
+        const prefix = `[${timestamp}] ${category}:`;
+        
+        if (data) {
+            console.log(`${prefix} ${message}`, data);
+        } else {
+            console.log(`${prefix} ${message}`);
+        }
+    },
+    
+    warn: (category, message, data = null) => {
+        const timestamp = new Date().toISOString().substring(11, 19);
+        const prefix = `⚠️ [${timestamp}] ${category}:`;
+        
+        if (data) {
+            console.warn(`${prefix} ${message}`, data);
+        } else {
+            console.warn(`${prefix} ${message}`);
+        }
+    },
+    
+    error: (category, message, error = null) => {
+        const timestamp = new Date().toISOString().substring(11, 19);
+        const prefix = `❌ [${timestamp}] ${category}:`;
+        
+        if (error) {
+            console.error(`${prefix} ${message}`, error);
+        } else {
+            console.error(`${prefix} ${message}`);
+        }
+    },
+    
+    success: (category, message, data = null) => {
+        const timestamp = new Date().toISOString().substring(11, 19);
+        const prefix = `✅ [${timestamp}] ${category}:`;
+        
+        if (data) {
+            console.log(`${prefix} ${message}`, data);
+        } else {
+            console.log(`${prefix} ${message}`);
+        }
+    }
+};
+
+// Memory management utilities
+const MemoryManager = {
+    clearGlobalCache: () => {
+        const keysToDelete = [
+            'allRidersFromExcel',
+            'etappeInfoData', 
+            'hasEindstandData',
+            'etappesWithRiderData',
+            'stagePointsBreakdown',
+            'expectedTotalPoints',
+            'actualPointsAllocated',
+            'allRiderNamesFromExcel'
+        ];
+        
+        keysToDelete.forEach(key => {
+            if (window[key]) {
+                delete window[key];
+                ErrorHandler.log('MEMORY', `Cleared window.${key}`);
+            }
+        });
+    },
+    
+    clearLocalStorage: () => {
+        const keysToRemove = [
+            'temp-excel-data',
+            'cached-participants', 
+            'cached-riders',
+            'cached-stage',
+            'excel-file-backup',
+            'excel-file-name',
+            'excel-file-date',
+            'export-data',
+            'last-export',
+            'tourploeg-data',
+            'participants-backup',
+            'allRiders-backup',
+            'app-cache',
+            'data-cache',
+            'stage-cache'
+        ];
+        
+        keysToRemove.forEach(key => {
+            try {
+                localStorage.removeItem(key);
+            } catch(e) {
+                ErrorHandler.warn('MEMORY', `Could not remove localStorage key: ${key}`, e);
+            }
+        });
+        
+        ErrorHandler.success('MEMORY', 'localStorage cleared');
+    },
+    
+    fullReset: () => {
+        // Reset global variables
+        participants = [];
+        allRiders = [];
+        currentStage = 1;
+        
+        // Clear all caches
+        MemoryManager.clearGlobalCache();
+        MemoryManager.clearLocalStorage();
+        
+        // Clear sessionStorage
+        try {
+            sessionStorage.clear();
+            ErrorHandler.log('MEMORY', 'sessionStorage cleared');
+        } catch(e) {
+            ErrorHandler.warn('MEMORY', 'Could not clear sessionStorage', e);
+        }
+        
+        // Force garbage collection if available
+        if (window.gc) {
+            window.gc();
+            ErrorHandler.log('MEMORY', 'Garbage collection triggered');
+        }
+        
+        ErrorHandler.success('MEMORY', 'Full reset completed');
+    }
+};
+
 // No admin authentication needed - simplified access
 
 // Tab navigation
@@ -37,6 +169,9 @@ function showTab(tabName) {
         case 'daily-prizes':
             loadDailyPrizesTable();
             break;
+        case 'ranking':
+            loadRankingTable();
+            break;
         case 'historie':
             loadHistorieTab();
             break;
@@ -62,7 +197,7 @@ function processTeamData(teamData) {
                     team.push({
                         name: riderName,
                         team: teamName,
-                        points: Array(22).fill(0), // 22 stages max (21 etappes + eindstand)
+                        points: [...window.EMPTY_POINTS_TEMPLATE], // 22 stages max (21 etappes + eindstand)
                         status: "active"
                     });
                 }
@@ -72,7 +207,7 @@ function processTeamData(teamData) {
                 name: deelnemer.Naam,
                 totalPoints: 0,
                 dailyWins: 0,
-                stagePoints: Array(22).fill(0), // 22 stages max (21 etappes + eindstand)
+                stagePoints: [...window.EMPTY_STAGE_POINTS_TEMPLATE], // 22 stages max (21 etappes + eindstand)
                 team: team
             });
         });
@@ -86,7 +221,7 @@ function processTeamData(teamData) {
             triggerPodiumAnimation();
         }, 500);
         
-        console.log(`✅ Processed ${participants.length} participants`);
+        ErrorHandler.success('PROCESSING', `Processed ${participants.length} participants`);
     }
 }
 
@@ -112,6 +247,7 @@ function processStageData(stageData) {
     
     recalculateAllData();
     loadParticipantsTable();
+    loadRankingTable(); // Load ranking progression table
     updatePodiums();
     updateTableHeaders();
     
@@ -286,6 +422,7 @@ function recalculateAllData() {
     });
     
     calculateAllDailyWins();
+    calculateRankingHistory(); // Calculate ranking history after all calculations
     createAllRidersArray();
     participants.sort((a, b) => b.totalPoints - a.totalPoints);
 }
@@ -309,6 +446,99 @@ function calculateAllDailyWins() {
             winner.dailyWins++;
         }
     }
+}
+
+// Ranking History Functions
+function calculateRankingHistory() {
+    ErrorHandler.log('RANKING', 'Calculating ranking history...');
+    rankingHistory = [];
+    
+    // Calculate rankings stage by stage
+    for (let stageIndex = 0; stageIndex < currentStage; stageIndex++) {
+        const stageRankings = [];
+        
+        // Calculate total points up to this stage for each participant
+        participants.forEach(participant => {
+            const totalPointsUpToStage = participant.stagePoints
+                .slice(0, stageIndex + 1)
+                .reduce((sum, points) => sum + points, 0);
+            
+            stageRankings.push({
+                name: participant.name,
+                totalPoints: totalPointsUpToStage,
+                stagePoints: participant.stagePoints[stageIndex] || 0
+            });
+        });
+        
+        // Sort by total points (descending) to get rankings
+        stageRankings.sort((a, b) => b.totalPoints - a.totalPoints);
+        
+        // Add position to each participant
+        stageRankings.forEach((participant, index) => {
+            participant.position = index + 1;
+        });
+        
+        rankingHistory[stageIndex] = stageRankings;
+        
+        ErrorHandler.log('RANKING', `Stage ${stageIndex + 1} rankings calculated`, {
+            leader: stageRankings[0].name,
+            points: stageRankings[0].totalPoints
+        });
+    }
+    
+    ErrorHandler.success('RANKING', `Ranking history calculated for ${currentStage} stages`);
+}
+
+function getRankingChanges() {
+    if (rankingHistory.length === 0) {
+        calculateRankingHistory();
+    }
+    
+    const rankingProgression = [];
+    
+    participants.forEach(participant => {
+        const progression = {
+            name: participant.name,
+            stages: [],
+            currentRanking: 0
+        };
+        
+        // Get ranking for each stage
+        rankingHistory.forEach((stageRankings, stageIndex) => {
+            const participantRanking = stageRankings.find(p => p.name === participant.name);
+            if (participantRanking) {
+                const stageData = {
+                    stage: stageIndex + 1,
+                    position: participantRanking.position,
+                    totalPoints: participantRanking.totalPoints,
+                    stagePoints: participantRanking.stagePoints
+                };
+                
+                // Calculate relative change from previous stage
+                if (stageIndex > 0) {
+                    const previousRanking = rankingHistory[stageIndex - 1].find(p => p.name === participant.name);
+                    if (previousRanking) {
+                        stageData.positionChange = participantRanking.position - previousRanking.position; // Negative = moved up, Positive = moved down
+                    }
+                }
+                
+                progression.stages.push(stageData);
+            }
+        });
+        
+        // Set current ranking
+        if (progression.stages.length > 0) {
+            progression.currentRanking = progression.stages[progression.stages.length - 1].position;
+        }
+        
+        rankingProgression.push(progression);
+    });
+    
+    // Sort by current ranking
+    rankingProgression.sort((a, b) => a.currentRanking - b.currentRanking);
+    
+    ErrorHandler.log('RANKING', 'Ranking progression calculated', rankingProgression);
+    return rankingProgression;
 }
 
 function createAllRidersArray() {
@@ -425,42 +655,17 @@ function exportData() {
 
 function resetData() {
     if (confirm('Weet je zeker dat je alle data wilt resetten?')) {
-        console.log('🧹 MANUAL RESET: NUCLEAR OPTION...');
+        ErrorHandler.log('RESET', 'Manual reset initiated');
         
-        // NUCLEAR RESET - clear absolutely everything
-        participants = [];
-        allRiders = [];
-        currentStage = 1;
-        window.etappeInfoData = null;
-        window.hasEindstandData = false;
-        
-        // Clear ALL window object properties
-        const windowKeys = Object.keys(window);
-        windowKeys.forEach(key => {
-            if (key.includes('tourploeg') || key.includes('excel') || key.includes('cache') || key.includes('data')) {
-                try {
-                    delete window[key];
-                    console.log('🗑️ Deleted window.' + key);
-                } catch(e) {
-                    // Some properties can't be deleted
-                }
-            }
-        });
-        
-        // Clear sessionStorage
-        try {
-            sessionStorage.clear();
-            console.log('🗑️ sessionStorage cleared');
-        } catch(e) {
-            console.log('⚠️ Could not clear sessionStorage:', e);
-        }
+        // Use centralized memory management
+        MemoryManager.fullReset();
         
         // Clear service worker cache
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.getRegistrations().then(function(registrations) {
                 for(let registration of registrations) {
                     registration.unregister();
-                    console.log('🗑️ ServiceWorker unregistered');
+                    ErrorHandler.log('RESET', 'ServiceWorker unregistered');
                 }
             });
         }
@@ -470,54 +675,12 @@ function resetData() {
             caches.keys().then(function(names) {
                 for (let name of names) {
                     caches.delete(name);
-                    console.log('🗑️ Cache deleted:', name);
+                    ErrorHandler.log('RESET', `Cache deleted: ${name}`);
                 }
             });
         }
         
-        // Clear ALL localStorage completely - including export cache
-        try {
-            // Excel-related cache
-            localStorage.removeItem('temp-excel-data');
-            localStorage.removeItem('cached-participants');
-            localStorage.removeItem('cached-riders');
-            localStorage.removeItem('cached-stage');
-            localStorage.removeItem('excel-file-backup');
-            localStorage.removeItem('excel-file-name');
-            localStorage.removeItem('excel-file-date');
-            
-            // Export-related cache (JSON downloads)
-            localStorage.removeItem('export-data');
-            localStorage.removeItem('last-export');
-            localStorage.removeItem('tourploeg-data');
-            localStorage.removeItem('participants-backup');
-            localStorage.removeItem('allRiders-backup');
-            
-            // Browser cache busting
-            localStorage.removeItem('app-cache');
-            localStorage.removeItem('data-cache');
-            localStorage.removeItem('stage-cache');
-            
-            // Clear ALL localStorage items that might exist
-            const keysToRemove = [];
-            for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
-                if (key && (key.includes('tourploeg') || key.includes('excel') || key.includes('export') || key.includes('cache'))) {
-                    keysToRemove.push(key);
-                }
-            }
-            keysToRemove.forEach(key => localStorage.removeItem(key));
-            
-            console.log('🗑️ ALL localStorage completely wiped (including exports)');
-        } catch(e) {
-            console.log('⚠️ Could not clear localStorage:', e);
-        }
-        
-        // Force garbage collection if possible
-        if (window.gc) {
-            window.gc();
-        }
-        
+        // Update UI
         const gettingStarted = document.getElementById('gettingStarted');
         if (gettingStarted) gettingStarted.style.display = 'block';
         
@@ -529,7 +692,7 @@ function resetData() {
         updatePodiums();
         updateTableHeaders();
         
-        console.log('✅ MANUAL RESET complete - fresh start');
+        ErrorHandler.success('RESET', 'Manual reset completed');
         
         // Force hard page reload to clear any remaining cache
         if (confirm('Wil je de pagina volledig herladen om alle cache te wissen?')) {
@@ -782,6 +945,7 @@ async function returnToCurrentYear() {
             loadRidersTable();
             loadMatrixTable();
             loadDailyPrizesTable();
+            loadRankingTable();
             updatePodiums();
             updateTableHeaders();
             if (typeof updateStageInfoFromExcel === 'function') {
