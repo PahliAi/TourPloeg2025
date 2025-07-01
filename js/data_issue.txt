@@ -1,0 +1,72 @@
+Data Flow Issues Analysis & Fix Plan                                                                                                       │ │
+│ │                                                                                                                                            │ │
+│ │ 🔍 Root Cause Analysis                                                                                                                     │ │
+│ │                                                                                                                                            │ │
+│ │ The Main Problems:                                                                                                                         │ │
+│ │                                                                                                                                            │ │
+│ │ 1. Double Rider Creation System:                                                                                                           │ │
+│ │   - window.allRidersFromExcel (from Excel Renners tab) vs allRiders (final processed array)                                                │ │
+│ │   - Excel processing creates dynamic riders (like "Filippo Gana") when they're found in stage results but missing from Renners tab         │ │
+│ │   - These dynamic riders get points but may be phantom entries                                                                             │ │
+│ │ 2. Point Allocation Issues:                                                                                                                │ │
+│ │   - Max stage points should be 53 (30+10+5+5+3), but system shows 55+ points                                                               │ │
+│ │   - Missing jersey detection (Wit jersey missing in stage 1)                                                                               │ │
+│ │   - Points getting duplicated or allocated incorrectly                                                                                     │ │
+│ │ 3. Etapes Tab Using Wrong Data:                                                                                                            │ │
+│ │   - My new Etapes functions use allRiders array (which includes phantom riders)                                                            │ │
+│ │   - Should be using actual Excel stage results data directly                                                                               │ │
+│ │   - Position calculation is based on points instead of actual Excel positions                                                              │ │
+│ │                                                                                                                                            │ │
+│ │ 🎯 Specific Issues to Fix:                                                                                                                 │ │
+│ │                                                                                                                                            │ │
+│ │ 1. Jersey Detection Problem                                                                                                                │ │
+│ │                                                                                                                                            │ │
+│ │ In processRegularStageData() lines 697-754:                                                                                                │ │
+│ │ - Jersey row detection is dynamic but unreliable                                                                                           │ │
+│ │ - Should use fixed row positions: Geel=16, Groen=17, Wit=18, Bolletjes=19 (Excel rows 16-19)                                               │ │
+│ │                                                                                                                                            │ │
+│ │ 2. Point Over-allocation                                                                                                                   │ │
+│ │                                                                                                                                            │ │
+│ │ In processRegularStageData() lines 654-691:                                                                                                │ │
+│ │ - Dynamic rider creation allows duplicate point allocation                                                                                 │ │
+│ │ - No validation against actual Excel structure                                                                                             │ │
+│ │ - Points get allocated to riders not in original Excel data                                                                                │ │
+│ │                                                                                                                                            │ │
+│ │ 3. Etapes Display Issues                                                                                                                   │ │
+│ │                                                                                                                                            │ │
+│ │ In my new functions (ui-components.js lines 1300-1400):                                                                                    │ │
+│ │ - Using allRiders array instead of raw Excel data                                                                                          │ │
+│ │ - Sorting by points instead of showing actual Excel positions                                                                              │ │
+│ │ - No access to raw Excel stage results                                                                                                     │ │
+│ │                                                                                                                                            │ │
+│ │ 🔧 Fix Strategy:                                                                                                                           │ │
+│ │                                                                                                                                            │ │
+│ │ Phase 1: Fix Excel Data Processing                                                                                                         │ │
+│ │                                                                                                                                            │ │
+│ │ 1. Fix jersey row detection - use hardcoded positions                                                                                      │ │
+│ │ 2. Add validation to prevent over-allocation of points                                                                                     │ │
+│ │ 3. Store raw Excel stage data for direct access by Etapes tab                                                                              │ │
+│ │                                                                                                                                            │ │
+│ │ Phase 2: Fix Etapes Tab                                                                                                                    │ │
+│ │                                                                                                                                            │ │
+│ │ 1. Create new data structure to store raw stage results from Excel                                                                         │ │
+│ │ 2. Modify Etapes functions to use actual Excel positions (1-10 + jerseys)                                                                  │ │
+│ │ 3. Fix riders table to show proper positions instead of point-sorted list                                                                  │ │
+│ │ 4. Fix podium calculations to use stage-specific data, not cumulative arrays                                                               │ │
+│ │                                                                                                                                            │ │
+│ │ Phase 3: Data Validation                                                                                                                   │ │
+│ │                                                                                                                                            │ │
+│ │ 1. Add point allocation validation (max 53 per stage)                                                                                      │ │
+│ │ 2. Add missing rider warnings without auto-creation                                                                                        │ │
+│ │ 3. Add stage completeness checks                                                                                                           │ │
+│ │                                                                                                                                            │ │
+│ │ 📝 Implementation Plan:                                                                                                                    │ │
+│ │                                                                                                                                            │ │
+│ │ 1. Add window.stageResultsRaw to store Excel stage data directly                                                                           │ │
+│ │ 2. Fix jersey detection with hardcoded row numbers                                                                                         │ │
+│ │ 3. Prevent phantom rider creation - only allocate points to Excel riders                                                                   │ │
+│ │ 4. Rewrite Etapes display functions to use raw Excel data                                                                                  │ │
+│ │ 5. Add validation logging for point allocation limits                                                                                      │ │
+│ │                                                                                                                                            │ │
+│ │ This will eliminate the 55+ point issue, show proper 1-10 + jersey positions, prevent phantom riders, and ensure Etapes tab displays       │ │
+│ │ accurate Excel data.

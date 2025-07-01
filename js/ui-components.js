@@ -17,7 +17,32 @@ function loadRidersTable() {
     
     tbody.innerHTML = '';
     
-    allRiders.forEach((rider, index) => {
+    // Get race positions from Excel data for proper ordering
+    const ridersWithPositions = allRiders.map(rider => {
+        let racePosition = null;
+        
+        // Get position from final classification if available
+        if (window.hasEindstandData && window.racePositions && window.racePositions[rider.name]) {
+            racePosition = window.racePositions[rider.name];
+        }
+        
+        return {
+            ...rider,
+            racePosition: racePosition
+        };
+    });
+    
+    // Sort by race position if available, otherwise by points (which represents current GC)
+    ridersWithPositions.sort((a, b) => {
+        if (a.racePosition !== null && b.racePosition !== null) {
+            return a.racePosition - b.racePosition; // Both have final positions, sort by position
+        }
+        if (a.racePosition !== null) return -1; // a has final position, put it first
+        if (b.racePosition !== null) return 1; // b has final position, put it first
+        return b.totalPoints - a.totalPoints; // Neither has final position, sort by current points (GC)
+    });
+    
+    ridersWithPositions.forEach((rider, index) => {
         const row = document.createElement('tr');
         const statusClass = rider.status === 'dropped' ? 'rider-dropped' : '';
         
@@ -38,9 +63,19 @@ function loadRidersTable() {
         const statusIcon = rider.status === 'dropped' ? '🔴 Uitgevallen' : '🟢 Actief';
         const rowClass = rider.status === 'dropped' ? 'rider-dropped-row' : '';
         
+        // Show actual race position if available, otherwise show current general classification position
+        let displayPosition;
+        if (rider.racePosition !== null) {
+            // Final race position available
+            displayPosition = rider.racePosition;
+        } else {
+            // During race: show position based on current points (general classification)
+            displayPosition = index + 1;
+        }
+        
         row.className = rowClass;
         row.innerHTML = `
-            <td><strong>${index + 1}</strong></td>
+            <td><strong>${displayPosition}</strong></td>
             <td class="${statusClass}">${rider.name}</td>
             <td class="points-cell ${statusClass}"><strong>${rider.totalPoints}</strong></td>
             ${stagePointsHtml}
@@ -939,4 +974,485 @@ function autoSizeAllTables() {
             }
         });
     }, 150); // Longer delay to ensure DOM is fully updated
+}
+
+// Etapes functions
+function loadEtapesTable() {
+    console.log('🗓️ Loading etapes table...');
+    
+    // Populate the etapes dropdown
+    populateEtapesDropdown();
+    
+    // Clear the selected stage info and tables
+    document.getElementById('selectedStageInfo').style.display = 'none';
+    document.getElementById('selectedStagePodiums').style.display = 'none';
+    document.getElementById('stageResultsContainer').style.display = 'none';
+}
+
+function populateEtapesDropdown() {
+    const selector = document.getElementById('etapeSelector');
+    if (!selector) return;
+    
+    // Clear existing options except the first one
+    selector.innerHTML = '<option value="">Kies een etappe...</option>';
+    
+    // Check if we have stage data
+    if (!window.etappeInfoData || !window.etappesWithRiderData) {
+        selector.innerHTML = '<option value="">Geen etappe data beschikbaar</option>';
+        return;
+    }
+    
+    // Add regular stages that have rider data
+    window.etappesWithRiderData.forEach(stageNum => {
+        if (stageNum <= 21) { // Regular stages 1-21
+            const stageInfo = window.etappeInfoData[stageNum];
+            const option = document.createElement('option');
+            option.value = stageNum;
+            option.textContent = `Etappe ${stageNum}${stageInfo ? ` - ${stageInfo.route}` : ''}`;
+            selector.appendChild(option);
+        }
+    });
+    
+    // Add final classification if available
+    if (window.hasEindstandData) {
+        const option = document.createElement('option');
+        option.value = '22';
+        option.textContent = 'Eindklassement';
+        selector.appendChild(option);
+    }
+}
+
+function showSelectedStage(stageValue) {
+    if (!stageValue) {
+        // Hide all stage-specific content
+        document.getElementById('selectedStageInfo').style.display = 'none';
+        document.getElementById('selectedStagePodiums').style.display = 'none';
+        document.getElementById('stageResultsContainer').style.display = 'none';
+        return;
+    }
+    
+    const stageNum = parseInt(stageValue);
+    console.log(`🗓️ Showing stage ${stageNum} details`);
+    
+    // Show stage info
+    displayStageInfo(stageNum);
+    
+    // Show stage podiums (three podiums like homepage)
+    displayStagePodiums(stageNum);
+    
+    // Show stage results tables
+    displayStageResults(stageNum);
+}
+
+function displayStageInfo(stageNum) {
+    const stageInfo = window.etappeInfoData[stageNum];
+    const infoContainer = document.getElementById('selectedStageInfo');
+    
+    if (!stageInfo) {
+        infoContainer.style.display = 'none';
+        return;
+    }
+    
+    // Update stage info elements
+    const isEindstand = stageNum === 22;
+    document.getElementById('selectedStageTitle').textContent = 
+        isEindstand ? '🏆 Eindklassement' : `🗓️ Etappe ${stageNum}`;
+    
+    document.getElementById('selectedStageName').innerHTML = 
+        `<strong>${stageInfo.route || '-'}</strong>`;
+    
+    if (isEindstand) {
+        document.getElementById('selectedStageDetails').textContent = 'Definitieve uitslag';
+        document.getElementById('selectedStageDescription').textContent = 'Tour de France 2025';
+    } else {
+        document.getElementById('selectedStageDetails').textContent = 
+            `${stageInfo.afstand || '-'} | ${stageInfo.type || '-'}`;
+        document.getElementById('selectedStageDescription').textContent = 
+            stageInfo.datum || '-';
+    }
+    
+    infoContainer.style.display = 'block';
+}
+
+function displayStagePodiums(stageNum) {
+    const podiumsContainer = document.getElementById('selectedStagePodiums');
+    
+    if (!participants || participants.length === 0) {
+        podiumsContainer.style.display = 'none';
+        return;
+    }
+    
+    const stageIndex = stageNum - 1; // Convert to 0-based index
+    
+    // Calculate rankings for this stage (cumulative up to this stage)
+    let dailyRanking, generalRanking, dailyWinsRanking;
+    
+    if (stageNum === 22) {
+        // Final classification rankings
+        dailyRanking = [...participants].sort((a, b) => b.totalPoints - a.totalPoints);
+        generalRanking = [...participants].sort((a, b) => b.totalPoints - a.totalPoints);
+        dailyWinsRanking = [...participants].sort((a, b) => b.dailyWins - a.dailyWins);
+    } else {
+        // Regular stage rankings
+        dailyRanking = [...participants].sort((a, b) => 
+            (b.stagePoints[stageIndex] || 0) - (a.stagePoints[stageIndex] || 0)
+        );
+        
+        // General classification up to this stage (cumulative points)
+        generalRanking = [...participants].sort((a, b) => {
+            const aCumulative = a.stagePoints.slice(0, stageIndex + 1).reduce((sum, p) => sum + (p || 0), 0);
+            const bCumulative = b.stagePoints.slice(0, stageIndex + 1).reduce((sum, p) => sum + (p || 0), 0);
+            return bCumulative - aCumulative;
+        });
+        
+        // Daily wins up to this stage
+        dailyWinsRanking = [...participants].sort((a, b) => {
+            const aDailyWins = calculateDailyWinsUpToStage(a, stageIndex);
+            const bDailyWins = calculateDailyWinsUpToStage(b, stageIndex);
+            return bDailyWins - aDailyWins;
+        });
+    }
+    
+    // Update podium titles
+    const stageLabel = stageNum === 22 ? 'Eindstand' : `Etappe ${stageNum}`;
+    document.getElementById('selectedDailyPodiumTitle').textContent = 
+        stageNum === 22 ? '🔵 Eindstand Winnaar' : `🔵 ${stageLabel} Winnaar`;
+    document.getElementById('selectedGeneralPodiumTitle').textContent = 
+        `🟡 Algemeen na ${stageLabel}`;
+    document.getElementById('selectedDailyWinsPodiumTitle').textContent = 
+        `🏆 Dagoverwinningen na ${stageLabel}`;
+    
+    // Create podium content for each podium
+    updateSelectedPodiumContent('selectedDailyPodiumPlaces', dailyRanking, stageNum === 22 ? 'total' : stageIndex);
+    updateSelectedPodiumContent('selectedGeneralPodiumPlaces', generalRanking, stageNum === 22 ? 'total' : 'cumulative-' + stageIndex);
+    updateSelectedPodiumContent('selectedDailyWinsPodiumPlaces', dailyWinsRanking, 'dailywins');
+    
+    podiumsContainer.style.display = 'block';
+}
+
+function calculateDailyWinsUpToStage(participant, stageIndex) {
+    let dailyWins = 0;
+    for (let i = 0; i <= stageIndex; i++) {
+        // Check if this participant was the stage winner (or tied for first)
+        const stagePoints = participant.stagePoints[i] || 0;
+        if (stagePoints > 0) {
+            // Find the highest points for this stage
+            const maxPointsForStage = Math.max(...participants.map(p => p.stagePoints[i] || 0));
+            if (stagePoints === maxPointsForStage) {
+                dailyWins++;
+            }
+        }
+    }
+    return dailyWins;
+}
+
+function updateSelectedPodiumContent(podiumPlacesId, ranking, scoreType) {
+    const podiumPlaces = document.getElementById(podiumPlacesId);
+    if (!podiumPlaces) return;
+    
+    // Group participants by their scores to handle ties
+    const scoreGroups = [];
+    let currentScore = null;
+    let currentGroup = [];
+    
+    ranking.forEach(participant => {
+        let score;
+        if (scoreType === 'total') {
+            score = participant.totalPoints;
+        } else if (scoreType === 'dailywins') {
+            score = participant.dailyWins; // This should be calculated up to the stage
+        } else if (typeof scoreType === 'string' && scoreType.startsWith('cumulative-')) {
+            // Extract stage index from 'cumulative-X' format
+            const stageIndex = parseInt(scoreType.split('-')[1]);
+            score = participant.stagePoints.slice(0, stageIndex + 1).reduce((sum, p) => sum + (p || 0), 0);
+        } else if (typeof scoreType === 'number') {
+            // For numeric scoreType, use just that stage's points (for daily winner)
+            score = participant.stagePoints[scoreType] || 0;
+        } else {
+            score = participant.totalPoints;
+        }
+        
+        if (score !== currentScore) {
+            if (currentGroup.length > 0) {
+                scoreGroups.push({score: currentScore, participants: currentGroup});
+            }
+            currentScore = score;
+            currentGroup = [participant];
+        } else {
+            currentGroup.push(participant);
+        }
+    });
+    
+    if (currentGroup.length > 0) {
+        scoreGroups.push({score: currentScore, participants: currentGroup});
+    }
+    
+    // Display top 3 positions
+    let podiumHtml = '';
+    let position = 1;
+    let positionCount = 0;
+    
+    for (let groupIndex = 0; groupIndex < scoreGroups.length && positionCount < 3; groupIndex++) {
+        const group = scoreGroups[groupIndex];
+        let points, subtitle;
+        
+        if (scoreType === 'dailywins') {
+            points = `${group.score} dagoverwinning${group.score !== 1 ? 'en' : ''}`;
+            subtitle = position === 1 ? '🥇 Dagkoning!' : (position === 2 ? '🥈 Tweede plaats' : '🥉 Derde plaats');
+        } else {
+            points = `${group.score} punten`;
+            subtitle = position === 1 ? '🥇 Winnaar!' : (position === 2 ? '🥈 Tweede plaats' : '🥉 Derde plaats');
+        }
+        
+        const positionClass = position === 1 ? 'first' : (position === 2 ? 'second' : 'third');
+        
+        // Create names list (max 3 names)
+        const limitedParticipants = group.participants.slice(0, 3);
+        const namesHtml = limitedParticipants.map(p => p.name).join('<br>');
+        
+        if (group.participants.length > 1) {
+            subtitle = `${subtitle} (gedeeld)`;
+        }
+        
+        podiumHtml += `
+            <div class="podium-place ${positionClass}">
+                <div class="podium-number">${position}</div>
+                <div class="podium-name">${namesHtml}</div>
+                <div class="podium-points">${points}</div>
+                <div style="font-size: 0.8em; margin-top: 5px;">${subtitle}</div>
+            </div>
+        `;
+        
+        position += group.participants.length;
+        positionCount++;
+    }
+    
+    podiumPlaces.innerHTML = podiumHtml;
+}
+
+function displayStageResults(stageNum) {
+    const resultsContainer = document.getElementById('stageResultsContainer');
+    
+    // Display riders points table
+    displayStageRidersTable(stageNum);
+    
+    // Display participants points table
+    displayStageParticipantsTable(stageNum);
+    
+    resultsContainer.style.display = 'block';
+}
+
+function displayStageRidersTable(stageNum) {
+    const tbody = document.getElementById('stageRidersTable');
+    
+    if (!allRiders || allRiders.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 20px; color: #666;">Geen renner data beschikbaar</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = '';
+    
+    const stageIndex = stageNum - 1; // Convert to 0-based index
+    
+    // For final classification, show actual race positions
+    if (stageNum === 22 && window.hasEindstandData) {
+        displayFinalClassificationRiders(tbody);
+        return;
+    }
+    
+    // For regular stages, show stage results in proper order (1-10, then jerseys)
+    displayRegularStageRiders(tbody, stageIndex);
+}
+
+function displayFinalClassificationRiders(tbody) {
+    // Get riders with final classification points and sort by actual race position
+    const ridersWithEindstandPoints = allRiders
+        .filter(rider => (rider.points[21] || 0) > 0) // Index 21 = stage 22 (Eindstand)
+        .sort((a, b) => (b.points[21] || 0) - (a.points[21] || 0));
+    
+    if (ridersWithEindstandPoints.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 20px; color: #666;">Geen eindklassement data</td></tr>';
+        return;
+    }
+    
+    // For final classification, try to determine actual positions based on points
+    // Higher points typically mean better position
+    ridersWithEindstandPoints.forEach((rider, index) => {
+        const eindstandPoints = rider.points[21] || 0;
+        const row = document.createElement('tr');
+        const statusClass = rider.status === 'dropped' ? 'rider-dropped' : '';
+        
+        // Try to determine position based on points (rough estimate)
+        let position = index + 1;
+        if (eindstandPoints >= 150) position = 1; // Winner gets 150 points
+        else if (eindstandPoints >= 75) position = 2; // 2nd place gets 75 points
+        else if (eindstandPoints >= 50) position = 3; // 3rd place gets 50 points
+        
+        row.innerHTML = `
+            <td><strong>${position}</strong></td>
+            <td class="${statusClass}">${rider.name}</td>
+            <td class="points-cell ${statusClass}"><strong>${eindstandPoints}</strong></td>
+        `;
+        
+        tbody.appendChild(row);
+    });
+}
+
+function displayRegularStageRiders(tbody, stageIndex) {
+    const stageNum = stageIndex + 1; // Convert to 1-based stage number
+    
+    // Get stage data from processedTourData
+    const stageData = window.processedTourData?.stages[stageNum];
+    if (!stageData) {
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 20px; color: #666;">Geen stage data beschikbaar</td></tr>';
+        return;
+    }
+    
+    const stageResults = [];
+    
+    // Add positions 1-10 from exact Excel data
+    for (let pos = 1; pos <= 10; pos++) {
+        const riderName = stageData.results.positions[pos];
+        if (riderName && stageData.riders[riderName]) {
+            stageResults.push({
+                position: pos.toString(),
+                riderName: riderName,
+                points: stageData.riders[riderName].stagePoints,
+                status: stageData.riders[riderName].status,
+                type: 'stage'
+            });
+        }
+    }
+    
+    // Add jersey holders from exact Excel data
+    const jerseyOrder = ['geel', 'groen', 'bolletjes', 'wit'];
+    const jerseyLabels = ['Geel', 'Groen', 'Bolletjes', 'Wit'];
+    
+    jerseyOrder.forEach((jerseyType, index) => {
+        const riderName = stageData.results.jerseys[jerseyType];
+        if (riderName && stageData.riders[riderName]) {
+            // Check if rider is not already in positions 1-10
+            const alreadyListed = stageResults.some(r => r.riderName === riderName);
+            if (!alreadyListed) {
+                stageResults.push({
+                    position: jerseyLabels[index],
+                    riderName: riderName,
+                    points: stageData.riders[riderName].stagePoints,
+                    status: stageData.riders[riderName].status,
+                    type: 'jersey'
+                });
+            }
+        }
+    });
+    
+    if (stageResults.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 20px; color: #666;">Geen resultaten voor deze etappe</td></tr>';
+        return;
+    }
+    
+    // Render the table
+    stageResults.forEach(result => {
+        const row = document.createElement('tr');
+        const statusClass = result.status === 'dropped' ? 'rider-dropped' : '';
+        const jerseyClass = result.type === 'jersey' ? 'jersey-row' : '';
+        
+        row.className = `${statusClass} ${jerseyClass}`;
+        row.innerHTML = `
+            <td><strong>${result.position}</strong></td>
+            <td class="${statusClass}">${result.riderName}</td>
+            <td class="points-cell ${statusClass}"><strong>${result.points}</strong></td>
+        `;
+        
+        tbody.appendChild(row);
+    });
+}
+
+function displayStageParticipantsTable(stageNum) {
+    const tbody = document.getElementById('stageParticipantsTable');
+    
+    if (!participants || participants.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px; color: #666;">Geen deelnemer data beschikbaar</td></tr>';
+        return;
+    }
+    
+    // Update the stage-specific header
+    const stageHeader = document.getElementById('stagePointsHeader');
+    if (stageHeader) {
+        stageHeader.textContent = stageNum === 22 ? 'Eindstand' : `Etappe ${stageNum}`;
+    }
+    
+    tbody.innerHTML = '';
+    
+    const stageIndex = stageNum - 1; // Convert to 0-based index
+    
+    // Sort participants by cumulative points up to this stage
+    const stageRanking = [...participants].sort((a, b) => {
+        if (stageNum === 22) {
+            return b.totalPoints - a.totalPoints; // Final classification
+        } else {
+            // Calculate cumulative points up to this stage
+            const aCumulative = a.stagePoints.slice(0, stageIndex + 1).reduce((sum, p) => sum + (p || 0), 0);
+            const bCumulative = b.stagePoints.slice(0, stageIndex + 1).reduce((sum, p) => sum + (p || 0), 0);
+            return bCumulative - aCumulative;
+        }
+    });
+    
+    // Calculate position changes from previous stage (only for regular stages)
+    let previousRanking = null;
+    if (stageNum > 1 && stageNum <= 21) {
+        const prevStageIndex = stageIndex - 1;
+        previousRanking = [...participants].sort((a, b) => {
+            // Calculate cumulative points up to previous stage
+            const aTotalToPrev = a.stagePoints.slice(0, prevStageIndex + 1).reduce((sum, p) => sum + (p || 0), 0);
+            const bTotalToPrev = b.stagePoints.slice(0, prevStageIndex + 1).reduce((sum, p) => sum + (p || 0), 0);
+            return bTotalToPrev - aTotalToPrev;
+        });
+    }
+    
+    // Add participants to table
+    stageRanking.forEach((participant, index) => {
+        const position = index + 1;
+        
+        // Calculate stage-specific points and cumulative total
+        let stageSpecificPoints, cumulativePoints;
+        
+        if (stageNum === 22) {
+            // Final classification
+            stageSpecificPoints = participant.totalPoints;
+            cumulativePoints = participant.totalPoints;
+        } else {
+            // Regular stage: points earned in just this stage
+            stageSpecificPoints = participant.stagePoints[stageIndex] || 0;
+            // Cumulative points up to this stage
+            cumulativePoints = participant.stagePoints.slice(0, stageIndex + 1).reduce((sum, p) => sum + (p || 0), 0);
+        }
+        
+        // Calculate position change
+        let positionChange = '';
+        if (previousRanking && stageNum > 1) {
+            const prevPosition = previousRanking.findIndex(p => p.name === participant.name) + 1;
+            const change = prevPosition - position;
+            
+            if (change > 0) {
+                positionChange = `<span style="color: #28a745; font-weight: bold;">+${change}</span>`;
+            } else if (change < 0) {
+                positionChange = `<span style="color: #dc3545; font-weight: bold;">${change}</span>`;
+            } else {
+                positionChange = `<span style="color: #6c757d;">0</span>`;
+            }
+        } else {
+            positionChange = '-';
+        }
+        
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td><strong>${position}</strong></td>
+            <td>${participant.name}</td>
+            <td class="points-cell"><strong>${stageSpecificPoints}</strong></td>
+            <td class="points-cell"><strong>${cumulativePoints}</strong></td>
+            <td class="points-cell">${positionChange}</td>
+        `;
+        
+        tbody.appendChild(row);
+    });
 }

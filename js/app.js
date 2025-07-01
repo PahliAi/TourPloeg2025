@@ -172,6 +172,9 @@ function showTab(tabName) {
         case 'ranking':
             loadRankingTable();
             break;
+        case 'etapes':
+            loadEtapesTable();
+            break;
         case 'historie':
             loadHistorieTab();
             break;

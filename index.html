@@ -30,6 +30,7 @@
             <button class="nav-tab" onclick="showTab('daily-prizes')"><img src="milka-nb.png" alt="" style="height: 16px; vertical-align: middle; margin-right: 4px;"> Classement général</button>
             <button class="nav-tab" onclick="showTab('ranking')">📈 Ranking</button>
             <button class="nav-tab" onclick="showTab('riders')">🚴 Pedaleurs</button>
+            <button class="nav-tab" onclick="showTab('etapes')">🗓️ Etapes</button>
             <button class="nav-tab" onclick="showTab('historie')">📚 Histoire</button>
             <button class="nav-tab" onclick="showTab('upload')">📊 Upload</button>
         </div>
@@ -282,6 +283,118 @@
                                 <!-- Filled by JavaScript -->
                             </tbody>
                         </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ETAPES TAB -->
+        <div id="etapes" class="tab-content">
+            <div class="card">
+                <h2>🗓️ Etapes</h2>
+                
+                <!-- Stage Selector -->
+                <div style="display: flex; align-items: center; justify-content: center; gap: 15px; margin: 20px 0;">
+                    <label for="etapeSelector" style="font-size: 1.1em; font-weight: bold; white-space: nowrap;">Selecteer een etappe:</label>
+                    <select id="etapeSelector" onchange="showSelectedStage(this.value)" style="padding: 15px 25px; border-radius: 25px; border: 2px solid #ddd; font-size: 1.1em; font-weight: bold; min-width: 250px; background: white;">
+                        <option value="">Kies een etappe...</option>
+                    </select>
+                </div>
+
+                <!-- Selected Stage Info -->
+                <div id="selectedStageInfo" class="stage-info" style="display: none; margin: 30px 0;">
+                    <div class="stage-card" style="text-align: center;">
+                        <h3 id="selectedStageTitle">🗓️ Etappe</h3>
+                        <p id="selectedStageName"><strong>-</strong></p>
+                        <p id="selectedStageDetails">- | -</p>
+                        <p id="selectedStageDescription">-</p>
+                    </div>
+                </div>
+
+                <!-- Selected Stage Podiums -->
+                <div id="selectedStagePodiums" style="display: none; margin: 30px 0;">
+                    <div class="dashboard-grid">
+                        <!-- Daily Podium (Blue Jersey) -->
+                        <div class="card podium" id="selectedDailyPodium">
+                            <h2 id="selectedDailyPodiumTitle">🔵 Dagpodium</h2>
+                            <div class="podium-places" id="selectedDailyPodiumPlaces">
+                                <!-- Filled by JavaScript -->
+                            </div>
+                            <div class="podium-overlay">
+                                <img src="blauw-nb.png" alt="Blauwe Trui" class="podium-image">
+                            </div>
+                        </div>
+
+                        <!-- General Classification Podium (Yellow Jersey) -->
+                        <div class="card podium" id="selectedGeneralPodium">
+                            <h2 id="selectedGeneralPodiumTitle">🟡 Algemeen Klassement</h2>
+                            <div class="podium-places" id="selectedGeneralPodiumPlaces">
+                                <!-- Filled by JavaScript -->
+                            </div>
+                            <div class="podium-overlay">
+                                <img src="geel-nb.png" alt="Gele Trui" class="podium-image">
+                            </div>
+                        </div>
+
+                        <!-- Daily Wins Podium (Milka Bar) -->
+                        <div class="card podium" id="selectedDailyWinsPodium">
+                            <h2 id="selectedDailyWinsPodiumTitle">🏆 Meeste Dagoverwinningen</h2>
+                            <div class="podium-places" id="selectedDailyWinsPodiumPlaces">
+                                <!-- Filled by JavaScript -->
+                            </div>
+                            <div class="podium-overlay">
+                                <img src="milka-nb.png" alt="Milka Reep" class="podium-image">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Results Tables Container -->
+                <div id="stageResultsContainer" style="display: none; margin-top: 30px;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; align-items: start;">
+                        <!-- Riders Points Table -->
+                        <div class="card">
+                            <h3>🚴 Renners Punten</h3>
+                            <div class="table-container">
+                                <div class="table-scroll">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>Positie</th>
+                                                <th>Renner</th>
+                                                <th>Punten</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="stageRidersTable">
+                                            <!-- Filled by JavaScript -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Participants Points Table -->
+                        <div class="card">
+                            <h3>👥 Deelnemers Punten</h3>
+                            <div class="table-container">
+                                <div class="table-scroll">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>Pos</th>
+                                                <th>Deelnemer</th>
+                                                <th id="stagePointsHeader">Etappe</th>
+                                                <th>Totaal</th>
+                                                <th>Ranking</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="stageParticipantsTable">
+                                            <!-- Filled by JavaScript -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
