@@ -26,11 +26,11 @@
         
         <div class="nav-tabs">
             <button class="nav-tab active" onclick="showTab('home')">🏠 Home</button>
-            <button class="nav-tab" onclick="showTab('riders')">🚴 Renners Score</button>
             <button class="nav-tab" onclick="showTab('matrix')">📊 Equipes</button>
-            <button class="nav-tab" onclick="showTab('daily-prizes')">🏆 Classement général</button>
+            <button class="nav-tab" onclick="showTab('daily-prizes')"><img src="milka-nb.png" alt="" style="height: 16px; vertical-align: middle; margin-right: 4px;"> Classement général</button>
             <button class="nav-tab" onclick="showTab('ranking')">📈 Ranking</button>
-            <button class="nav-tab" onclick="showTab('historie')">📚 Historie</button>
+            <button class="nav-tab" onclick="showTab('riders')">🚴 Pedaleurs</button>
+            <button class="nav-tab" onclick="showTab('historie')">📚 Histoire</button>
             <button class="nav-tab" onclick="showTab('upload')">📊 Upload</button>
         </div>
     </div>
@@ -178,7 +178,7 @@
         <!-- RIDERS TAB -->
         <div id="riders" class="tab-content">
             <div class="card">
-                <h2>🚴 Renners Score</h2>
+                <h2>🚴 Pedaleurs</h2>
                 <div class="table-container">
                     <div class="table-scroll">
                         <table>
@@ -208,6 +208,15 @@
         <div id="matrix" class="tab-content">
             <div class="card">
                 <h2>📊 Equipes</h2>
+                
+                <!-- Participant Selector -->
+                <div style="display: flex; align-items: center; justify-content: center; gap: 15px; margin: 20px 0;">
+                    <label for="participantSelector" style="font-size: 1.1em; font-weight: bold; white-space: nowrap;">Kies een deelnemer om zijn/haar Equipe te zien:</label>
+                    <select id="participantSelector" onchange="showSelectedParticipantTeam(this.value)" style="padding: 15px 25px; border-radius: 25px; border: 2px solid #ddd; font-size: 1.1em; font-weight: bold; min-width: 250px; background: white;">
+                        <option value="">Selecteer een deelnemer...</option>
+                    </select>
+                </div>
+                
                 <div class="matrix-container">
                     <div class="matrix-scroll">
                         <table class="matrix-table">
@@ -226,7 +235,7 @@
         <!-- DAILY PRIZES TAB -->
         <div id="daily-prizes" class="tab-content">
             <div class="card">
-                <h2>🏆 Classement général</h2>
+                <h2><img src="milka-nb.png" alt="🏆" style="height: 24px; vertical-align: middle;"> Classement général</h2>
                 <div class="table-container">
                     <div class="table-scroll">
                         <table>
@@ -235,7 +244,8 @@
                                     <th>Rang</th>
                                     <th>Deelnemer</th>
                                     <th>Totaal</th>
-                                    <th>Dagoverwinningen</th>
+                                    <th><img src="blauw-nb.png" alt="Blauwe Truien" style="width: 20px; height: 20px; vertical-align: middle;"></th>
+                                    <th><img src="geel-nb.png" alt="Gele Truien" style="width: 20px; height: 20px; vertical-align: middle;"></th>
                                 </tr>
                             </thead>
                             <tbody id="dailyPrizesTable">

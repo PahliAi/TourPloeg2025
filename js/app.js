@@ -179,6 +179,13 @@ function showTab(tabName) {
             // Upload tab - no special loading needed
             break;
     }
+    
+    // Apply auto-sizing after tab content is loaded and visible
+    setTimeout(() => {
+        if (typeof autoSizeAllTables === 'function') {
+            autoSizeAllTables();
+        }
+    }, 100);
 }
 
 // Data processing functions
@@ -621,7 +628,8 @@ function updateTableHeaders() {
         dailyPrizesHeaderHtml += `<th style="background: #ffe4b5;">Eind</th>`;
         dailyPrizesHeaderHtml += '<th>Totaal</th>'; // Alleen totaal kolom als er eindstand data is
     }
-    dailyPrizesHeaderHtml += '<th class="dagoverwinningen-column">Dagoverwinningen</th>';
+    dailyPrizesHeaderHtml += '<th><img src="blauw-nb.png" alt="Blauwe Truien" style="width: 20px; height: 20px; vertical-align: middle;"></th>';
+    dailyPrizesHeaderHtml += '<th><img src="geel-nb.png" alt="Gele Truien" style="width: 20px; height: 20px; vertical-align: middle;"></th>';
     document.getElementById('dailyPrizesHeader').innerHTML = dailyPrizesHeaderHtml;
 }
 

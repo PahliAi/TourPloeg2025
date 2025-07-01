@@ -342,7 +342,7 @@ html body div.container div.card div.table-scroll table td,
 table th, table td,
 .table-container th, .table-container td,
 .table-scroll th, .table-scroll td {
-    padding: 2px 4px !important;
+    padding: 2px 6px !important;
     border: 1px solid #d0d0d0 !important;
     font-size: 0.8em !important;
     font-family: 'Segoe UI', Arial, sans-serif !important;
@@ -350,6 +350,8 @@ table th, table td,
     white-space: nowrap !important;
     background: white !important;
     margin: 0 !important;
+    width: auto !important;
+    min-width: fit-content !important;
 }
 
 /* Fallback rule */
@@ -361,6 +363,8 @@ th, td {
     line-height: 1.2;
     white-space: nowrap;
     background: white;
+    width: auto;
+    min-width: fit-content;
 }
 
 /* FORCE table headers */
@@ -376,45 +380,49 @@ table th, th {
     border: 1px solid #a0a0a0 !important;
     text-shadow: none !important;
     font-size: 0.8em !important;
-    padding: 2px 4px !important;
+    padding: 2px 6px !important;
+    width: auto !important;
+    min-width: fit-content !important;
+    white-space: nowrap !important;
 }
 
-/* Sticky second column (Deelnemer/Name) for most tables, but not Equipes */
-html body div.container div.card div.table-container table:not(.matrix-table) td:nth-child(2),
-html body div.container div.card div.table-scroll table:not(.matrix-table) td:nth-child(2),
-html body div.container div.card div.table-container table:not(.matrix-table) th:nth-child(2),
-html body div.container div.card div.table-scroll table:not(.matrix-table) th:nth-child(2) {
+/* Dynamic sticky columns - handled by JavaScript autoSizeTable function */
+.sticky-column {
     position: sticky !important;
-    left: 0 !important;
     z-index: 15 !important;
     background: linear-gradient(135deg, #f8f8f8, #f0f0f0) !important;
     border-right: 2px solid #a0a0a0 !important;
 }
 
-/* Header of second column gets highest z-index for non-matrix tables */
-html body div.container div.card div.table-container table:not(.matrix-table) th:nth-child(2),
-html body div.container div.card div.table-scroll table:not(.matrix-table) th:nth-child(2) {
+/* Sticky column headers get higher z-index */
+th.sticky-column {
     z-index: 25 !important;
     background: linear-gradient(135deg, #e8e8e8, #d8d8d8) !important;
 }
 
-/* Sticky first column for Equipes table only */
-.matrix-table td:nth-child(1),
-.matrix-table th:nth-child(1) {
-    position: sticky !important;
-    left: 0 !important;
-    z-index: 15 !important;
-    background: linear-gradient(135deg, #f8f8f8, #f0f0f0) !important;
-    border-right: 2px solid #a0a0a0 !important;
+/* Ensure matrix table sticky columns maintain proper text orientation */
+.matrix-table .sticky-column {
     writing-mode: initial !important;
     text-orientation: initial !important;
     text-align: left !important;
 }
 
-/* Header of first column gets highest z-index for matrix table */
-.matrix-table th:nth-child(1) {
-    z-index: 25 !important;
-    background: linear-gradient(135deg, #e8e8e8, #d8d8d8) !important;
+/* Force matrix and ranking table containers to respect max-height */
+.card.auto-sized-card .matrix-container,
+.card.auto-sized-card .matrix-scroll,
+#matrix .table-container,
+#matrix .table-scroll {
+    max-height: calc(100vh - 300px) !important;
+    overflow-y: auto !important;
+    overflow-x: auto !important;
+}
+
+/* Ranking table needs even more space reduction */
+#ranking .table-container,
+#ranking .table-scroll {
+    max-height: calc(100vh - 350px) !important;
+    overflow-y: auto !important;
+    overflow-x: auto !important;
 }
 
 tr:nth-child(even) {
@@ -626,6 +634,81 @@ table td.dagoverwinningen-column {
     width: 100%;
     height: auto;
     max-height: calc(100vh - 40px);
+}
+
+/* Enhanced table auto-sizing system */
+table {
+    table-layout: auto !important;
+    width: 100% !important;
+}
+
+/* JavaScript auto-sized tables override default behavior */
+table.auto-sized-table {
+    table-layout: auto !important;
+    width: auto !important;
+    max-width: none !important;
+}
+
+table.auto-sized-table th,
+table.auto-sized-table td {
+    width: auto !important;
+    min-width: fit-content !important;
+    white-space: nowrap !important;
+    max-width: none !important;
+}
+
+/* Auto-sized containers - no horizontal scroll needed, vertical scroll only */
+.auto-sized-container {
+    width: auto !important;
+    max-width: none !important;
+    overflow-x: visible !important;
+    overflow-y: auto !important;
+    max-height: calc(100vh - 280px) !important; /* More space subtracted = smaller frame height */
+}
+
+/* Ensure point columns stay compact when auto-sized */
+.points-cell {
+    text-align: center !important;
+}
+
+/* Modal dynamic width adjustments */
+.detail-content {
+    width: auto !important;
+    min-width: 300px !important;
+    max-width: 90vw !important;
+    overflow-x: auto !important;
+}
+
+/* Ensure tables fit properly in modals */
+.detail-content table {
+    width: auto !important;
+    min-width: 100% !important;
+}
+
+/* Auto-sized cards adjust to table content and center on page */
+.card.auto-sized-card {
+    width: auto !important;
+    margin: 0 auto !important;
+    max-width: 95vw !important;
+    min-width: 300px !important;
+}
+
+/* Ensure auto-sized cards maintain proper spacing and appearance */
+.card.auto-sized-card .table-container,
+.card.auto-sized-card .table-scroll {
+    width: 100% !important;
+    overflow-x: visible !important;
+    overflow-y: auto !important;
+    max-height: calc(100vh - 300px) !important; /* Much smaller frame = no page scroll */
+}
+
+/* Responsive behavior for auto-sized cards */
+@media (max-width: 768px) {
+    .card.auto-sized-card {
+        width: 95vw !important;
+        margin: 0 auto !important;
+        min-width: unset !important;
+    }
 }
 
 .close-btn {

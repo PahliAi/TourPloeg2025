@@ -48,11 +48,24 @@ function loadRidersTable() {
         `;
         tbody.appendChild(row);
     });
+    
+    // Apply auto-sizing after riders table is populated - multiple attempts for reliability
+    [50, 150, 300].forEach(delay => {
+        setTimeout(() => {
+            const table = document.querySelector('#ridersTable')?.closest('table');
+            if (table && table.offsetHeight > 0) {
+                autoSizeTable(table, { nameColumns: [0, 1], statusColumns: 'auto' }); // Position(0) + Renner(1) both sticky
+            }
+        }, delay);
+    });
 }
 
 function loadMatrixTable() {
     const thead = document.getElementById('matrixHeader');
     const tbody = document.getElementById('matrixTable');
+    
+    // Update participant selector dropdown
+    updateParticipantSelector();
     
     if (participants.length === 0) {
         thead.innerHTML = '<tr><th colspan="4">Geen data</th></tr>';
@@ -111,6 +124,16 @@ function loadMatrixTable() {
             ${participantCells}
         `;
         tbody.appendChild(row);
+    });
+    
+    // Apply auto-sizing after matrix table is populated - multiple attempts for reliability
+    [50, 150, 300].forEach(delay => {
+        setTimeout(() => {
+            const table = document.querySelector('#matrixTable')?.closest('table');
+            if (table && table.offsetHeight > 0) {
+                autoSizeTable(table, { nameColumns: [0], statusColumns: [1] }); // Renner name is column 0, Status is column 1
+            }
+        }, delay);
     });
 }
 
@@ -185,6 +208,16 @@ function loadRankingTable() {
         
         row.innerHTML = cellsHtml;
         tbody.appendChild(row);
+    });
+    
+    // Apply auto-sizing after ranking table is populated - multiple attempts for reliability
+    [50, 150, 300].forEach(delay => {
+        setTimeout(() => {
+            const table = document.querySelector('#rankingTable')?.closest('table');
+            if (table && table.offsetHeight > 0) {
+                autoSizeTable(table, { nameColumns: [0], pointColumns: [] }); // Deelnemer name is column 0, no specific point columns
+            }
+        }, delay);
     });
 }
 
@@ -274,15 +307,6 @@ function loadDailyPrizesTable() {
             stagePointsHtml += `<td class="points-cell" style="background: #ffe4b5; font-weight: bold;">${eindstandPoints}</td>`;
         }
         
-        // Maak truien tekst
-        let truienText = '';
-        if (blueJerseys > 0) truienText += `${blueJerseys}🔵`;
-        if (yellowJerseys > 0) {
-            if (truienText) truienText += ' ';
-            truienText += `${yellowJerseys}🟡`;
-        }
-        if (!truienText) truienText = '0';
-        
         // Voeg totaal kolom alleen toe als er eindstand data is
         let totalColumnHtml = '';
         if (window.hasEindstandData) {
@@ -294,9 +318,20 @@ function loadDailyPrizesTable() {
             <td>${participant.name}</td>
             ${stagePointsHtml}
             ${totalColumnHtml}
-            <td class="points-cell dagoverwinningen-column">${truienText}</td>
+            <td class="points-cell">${blueJerseys}</td>
+            <td class="points-cell">${yellowJerseys}</td>
         `;
         tbody.appendChild(row);
+    });
+    
+    // Apply auto-sizing after daily prizes table is populated - multiple attempts for reliability
+    [50, 150, 300].forEach(delay => {
+        setTimeout(() => {
+            const table = document.querySelector('#dailyPrizesTable')?.closest('table');
+            if (table && table.offsetHeight > 0) {
+                autoSizeTable(table, { nameColumns: [0, 1], statusColumns: [] }); // Rang(0) + Deelnemer(1) both sticky
+            }
+        }, delay);
     });
 }
 
@@ -436,30 +471,53 @@ function showParticipantDetail(participantName) {
                 <table>
                     <thead>
                         <tr>
-                            <th>Renner</th>
-                            <th>Team</th>
-                            <th>Totaal</th>`;
+                            <th style="width: auto;">Renner</th>`;
     
+    // Add stage columns
     for (let i = 1; i <= currentStage; i++) {
-        teamHtml += `<th>Et ${i}</th>`;
+        if (i <= 21) {
+            teamHtml += `<th>Et ${i}</th>`;
+        }
+    }
+    
+    // Add Totaal Etappes column
+    teamHtml += `<th style="background: #e8f4fd;">Totaal Etappes</th>`;
+    
+    // Add Eindstand column if data exists
+    if (window.hasEindstandData) {
+        teamHtml += `<th style="background: #ffe4b5;">Eind</th>`;
+        teamHtml += `<th>Totaal</th>`;
     }
     
     teamHtml += `<th>Status</th></tr></thead><tbody>`;
     
     participant.team.forEach(rider => {
         const statusClass = rider.status === 'dropped' ? 'rider-dropped' : '';
-        const totalPoints = rider.points.slice(0, currentStage).reduce((sum, points) => sum + points, 0);
         
         let stagePointsHtml = '';
         for (let i = 0; i < currentStage; i++) {
-            stagePointsHtml += `<td class="points-cell ${statusClass}">${rider.points[i] || 0}</td>`;
+            if (i < 21) { // Only stages 1-21
+                stagePointsHtml += `<td class="points-cell ${statusClass}">${rider.points[i] || 0}</td>`;
+            }
+        }
+        
+        // Calculate total of regular stages (1-21)
+        const totalEtappes = rider.points.slice(0, 21).reduce((sum, p) => sum + (p || 0), 0);
+        stagePointsHtml += `<td class="points-cell ${statusClass}" style="background: #e8f4fd; font-weight: bold;">${totalEtappes}</td>`;
+        
+        // Add Eindstand column if data exists
+        if (window.hasEindstandData) {
+            const eindstandPoints = rider.points[21] || 0; // Index 21 = stage 22 (Eindstand)
+            stagePointsHtml += `<td class="points-cell ${statusClass}" style="background: #ffe4b5; font-weight: bold;">${eindstandPoints}</td>`;
+            
+            // Total of everything
+            const totalPoints = rider.points.reduce((sum, p) => sum + (p || 0), 0);
+            stagePointsHtml += `<td class="points-cell ${statusClass}"><strong>${totalPoints}</strong></td>`;
         }
         
         teamHtml += `
             <tr>
-                <td class="${statusClass}">${rider.name}</td>
-                <td class="${statusClass}">${rider.team || '-'}</td>
-                <td class="points-cell ${statusClass}"><strong>${totalPoints}</strong></td>
+                <td class="${statusClass}" style="white-space: nowrap;">${rider.name}</td>
                 ${stagePointsHtml}
                 <td class="${statusClass}">${rider.status === 'dropped' ? '🔴 Uitgevallen' : '🟢 Actief'}</td>
             </tr>
@@ -479,8 +537,14 @@ function showParticipantDetail(participantName) {
     document.body.style.position = 'fixed';
     document.body.style.width = '100%';
     
-    // Scroll to top of modal content on mobile
+    // Apply auto-sizing to the modal table and adjust modal width
     setTimeout(() => {
+        const table = document.querySelector('#detailContent table');
+        if (table) {
+            autoSizeTable(table, { nameColumns: [0], statusColumns: 'auto' });
+        }
+        
+        // Scroll to top of modal content on mobile
         const detailContent = document.querySelector('.detail-content');
         if (detailContent) {
             detailContent.scrollTop = 0;
@@ -622,3 +686,257 @@ function calculateBiggestImprovement() {
 }
 
 // Excel View functies verwijderd
+
+// Participant selector functions
+function updateParticipantSelector() {
+    const selector = document.getElementById('participantSelector');
+    if (!selector) return;
+    
+    // Clear existing options except the first one
+    selector.innerHTML = '<option value="">Selecteer een deelnemer...</option>';
+    
+    // Add participants to dropdown
+    participants.forEach(participant => {
+        const option = document.createElement('option');
+        option.value = participant.name;
+        option.textContent = participant.name;
+        selector.appendChild(option);
+    });
+}
+
+function showSelectedParticipantTeam(participantName) {
+    if (!participantName) return;
+    
+    // Use the existing showParticipantDetail function to show in modal
+    showParticipantDetail(participantName);
+    
+    // Reset the dropdown to default
+    setTimeout(() => {
+        document.getElementById('participantSelector').value = '';
+    }, 100);
+}
+
+// Universal table auto-sizing system
+function autoSizeTable(tableElement, options = {}) {
+    if (!tableElement) return;
+    
+    // Prevent duplicate processing
+    const lastProcessed = tableElement.getAttribute('data-autosized-timestamp');
+    const now = Date.now();
+    if (lastProcessed && (now - parseInt(lastProcessed)) < 1000) {
+        // Skip if processed within last second
+        return;
+    }
+    tableElement.setAttribute('data-autosized-timestamp', now.toString());
+    
+    // Debug logging to help troubleshoot
+    const tableInfo = {
+        id: tableElement.id,
+        className: tableElement.className,
+        parentId: tableElement.parentElement?.id,
+        tbody: tableElement.querySelector('tbody')?.id,
+        headers: Array.from(tableElement.querySelectorAll('thead th')).map(th => th.textContent.trim()),
+        visible: tableElement.offsetHeight > 0,
+        width: tableElement.offsetWidth,
+        height: tableElement.offsetHeight
+    };
+    console.log('🔧 AutoSizing table:', tableInfo, 'with options:', options);
+    
+    const {
+        nameColumns = [0, 1], // Which columns contain names (0-indexed)
+        pointColumns = 'auto', // 'auto' to detect .points-cell, or array of indices
+        statusColumns = 'auto', // 'auto' to detect last column, or array of indices
+        maxModalWidth = '90vw',
+        minColumnWidth = '30px'
+    } = options;
+    
+    // Step 1: Reset any existing inline styles and FORCE auto-sizing
+    tableElement.classList.add('auto-sized-table');
+    tableElement.style.setProperty('table-layout', 'auto', 'important');
+    tableElement.style.setProperty('width', 'auto', 'important');
+    tableElement.style.setProperty('max-width', 'none', 'important');
+    
+    // Also force the table container to not be 100% width
+    const tableContainer = tableElement.closest('.table-container, .table-scroll');
+    if (tableContainer) {
+        tableContainer.classList.add('auto-sized-container');
+        tableContainer.style.setProperty('width', 'auto', 'important');
+        tableContainer.style.setProperty('max-width', 'none', 'important');
+        tableContainer.style.setProperty('overflow-x', 'auto', 'important');
+    }
+    
+    // Step 2: Identify column types
+    const headers = tableElement.querySelectorAll('thead th');
+    const rows = tableElement.querySelectorAll('tbody tr');
+    
+    if (headers.length === 0 || rows.length === 0) return;
+    
+    // Step 3: Apply column-specific styles - ALL columns should show full text
+    const stickyColumnNames = nameColumns.map(i => headers[i]?.textContent?.trim()).filter(Boolean);
+    console.log(`🎯 Processing ${headers.length} columns, making sticky: [${stickyColumnNames.join(', ')}]`);
+    
+    headers.forEach((header, index) => {
+        const cells = tableElement.querySelectorAll(`td:nth-child(${index + 1})`);
+        const headerText = header.textContent?.trim() || '';
+        
+        // ALL columns: auto-size to content, ensure full text is visible (FORCE with !important)
+        header.style.setProperty('width', 'auto', 'important');
+        header.style.setProperty('min-width', 'fit-content', 'important');
+        header.style.setProperty('white-space', 'nowrap', 'important');
+        header.style.setProperty('max-width', 'none', 'important');
+        
+        cells.forEach(cell => {
+            cell.style.setProperty('width', 'auto', 'important');
+            cell.style.setProperty('min-width', 'fit-content', 'important');
+            cell.style.setProperty('white-space', 'nowrap', 'important');
+            cell.style.setProperty('max-width', 'none', 'important');
+        });
+        
+        // Point columns: just center alignment, but keep auto width
+        if (pointColumns === 'auto' ? header.classList.contains('points-cell') || cells[0]?.classList.contains('points-cell') : pointColumns.includes(index)) {
+            header.style.textAlign = 'center';
+            cells.forEach(cell => {
+                cell.style.textAlign = 'center';
+            });
+        }
+        
+        // Apply sticky positioning to name columns for better UX
+        if (nameColumns.includes(index)) {
+            // Remove any existing sticky classes first
+            header.classList.remove('sticky-column');
+            cells.forEach(cell => cell.classList.remove('sticky-column'));
+            
+            // Add sticky class for CSS to handle
+            header.classList.add('sticky-column');
+            cells.forEach(cell => cell.classList.add('sticky-column'));
+            
+            // Calculate left position - delay this to allow table to render first
+            setTimeout(() => {
+                let leftPosition = 0;
+                for (let i = 0; i < index; i++) {
+                    if (nameColumns.includes(i)) {
+                        const prevHeader = headers[i];
+                        if (prevHeader && prevHeader.offsetWidth) {
+                            leftPosition += prevHeader.offsetWidth;
+                        }
+                    }
+                }
+                
+                console.log(`📌 Sticky "${headerText}" at ${leftPosition}px`);
+                
+                // Apply inline styles for immediate effect
+                header.style.position = 'sticky';
+                header.style.left = `${leftPosition}px`;
+                header.style.zIndex = '25';
+                header.style.background = 'linear-gradient(135deg, #e8e8e8, #d8d8d8)';
+                header.style.borderRight = '2px solid #a0a0a0';
+                
+                cells.forEach(cell => {
+                    cell.style.position = 'sticky';
+                    cell.style.left = `${leftPosition}px`;
+                    cell.style.zIndex = '15';
+                    cell.style.background = 'linear-gradient(135deg, #f8f8f8, #f0f0f0)';
+                    cell.style.borderRight = '2px solid #a0a0a0';
+                });
+            }, 50);
+        }
+    });
+    
+    // Step 4: Adjust container width (modal or main card)
+    setTimeout(() => {
+        const tableWidth = tableElement.scrollWidth;
+        
+        // Handle modal containers
+        const modal = tableElement.closest('.detail-view, .modal');
+        if (modal) {
+            const modalContent = modal.querySelector('.detail-content, .modal-content');
+            if (modalContent && tableWidth > 0) {
+                const optimalWidth = Math.min(tableWidth + 100, window.innerWidth * 0.9);
+                modalContent.style.width = `${optimalWidth}px`;
+                modalContent.style.maxWidth = maxModalWidth;
+            }
+        }
+        
+        // Handle main page cards
+        const card = tableElement.closest('.card');
+        if (card && tableWidth > 0 && !modal) {
+            const extraSpace = 80; // Extra space to prevent horizontal scrollbar
+            const minWidth = 300; // Minimum card width
+            const maxWidth = window.innerWidth * 0.95; // Max 95% of screen
+            const isMatrixTable = tableElement.querySelector('tbody#matrixTable') !== null;
+            
+            let optimalWidth;
+            
+            if (isMatrixTable && tableWidth > maxWidth) {
+                // For very wide matrix tables: use max screen width and allow horizontal scroll within table
+                optimalWidth = maxWidth;
+                console.log(`🎨 Matrix table too wide (${tableWidth}px), using max width ${optimalWidth}px with internal scroll`);
+                
+                // Ensure table container allows horizontal scrolling
+                if (tableContainer) {
+                    tableContainer.style.setProperty('overflow-x', 'auto', 'important');
+                    tableContainer.style.setProperty('overflow-y', 'auto', 'important');
+                }
+            } else {
+                // For normal tables: size card to table width + extra space
+                optimalWidth = Math.max(minWidth, Math.min(tableWidth + extraSpace, maxWidth));
+                console.log(`🎨 Resizing card to ${optimalWidth}px (table: ${tableWidth}px + ${extraSpace}px extra)`);
+                
+                // Ensure table container doesn't cause horizontal scroll
+                if (tableContainer) {
+                    tableContainer.style.setProperty('overflow-x', 'visible', 'important');
+                }
+            }
+            
+            // Apply card sizing and centering
+            card.style.setProperty('width', `${optimalWidth}px`, 'important');
+            card.style.setProperty('max-width', `${maxWidth}px`, 'important');
+            card.style.setProperty('margin', '0 auto', 'important');
+            card.classList.add('auto-sized-card');
+        }
+    }, 100); // Slightly longer delay to ensure table is fully rendered
+}
+
+// Apply auto-sizing to all tables after they're loaded
+function autoSizeAllTables() {
+    // Wait a bit longer to ensure tables are fully rendered
+    setTimeout(() => {
+        // Popup modal tables
+        const modalTables = document.querySelectorAll('.detail-view table');
+        modalTables.forEach(table => {
+            if (table.offsetHeight > 0) { // Only process visible tables
+                autoSizeTable(table, { nameColumns: [0], statusColumns: 'auto' });
+            }
+        });
+        
+        // Find all table containers and their tables
+        const tableConfigs = [
+            { selector: '#ridersTable', parentTable: true, config: { nameColumns: [0, 1], statusColumns: 'auto' } },
+            { selector: '#dailyPrizesTable', parentTable: true, config: { nameColumns: [0, 1], statusColumns: [] } },
+            { selector: '#matrixTable', parentTable: true, config: { nameColumns: [0], statusColumns: [1] } },
+            { selector: '#rankingTable', parentTable: true, config: { nameColumns: [0], pointColumns: [] } }
+        ];
+        
+        tableConfigs.forEach(({ selector, parentTable, config }) => {
+            const tbody = document.querySelector(selector);
+            if (tbody) {
+                const table = parentTable ? tbody.closest('table') : tbody;
+                if (table && table.offsetHeight > 0) { // Only process visible tables
+                    autoSizeTable(table, config);
+                }
+            }
+        });
+        
+        // Also try to find any other tables that might have been missed
+        const allTables = document.querySelectorAll('table');
+        allTables.forEach(table => {
+            if (table.offsetHeight > 0 && !table.hasAttribute('data-auto-sized')) {
+                // Mark as processed to avoid duplicate processing
+                table.setAttribute('data-auto-sized', 'true');
+                
+                // Default config for unknown tables
+                autoSizeTable(table, { nameColumns: [0, 1], statusColumns: 'auto' });
+            }
+        });
+    }, 150); // Longer delay to ensure DOM is fully updated
+}
