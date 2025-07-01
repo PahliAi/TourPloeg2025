@@ -5,8 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tour de France Poule 2024</title>
     
-    <!-- External Dependencies -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- External Dependencies - Local first, CDN fallback -->
+    <script src="js/xlsx.mini.js" onerror="loadXLSXFromCDN()"></script>
+    <script>
+        function loadXLSXFromCDN() {
+            if (typeof XLSX === 'undefined') {
+                console.log('📥 Loading XLSX from CDN fallback...');
+                var script = document.createElement('script');
+                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+                document.head.appendChild(script);
+            }
+        }
+    </script>
     
     <!-- Styles -->
     <link rel="stylesheet" href="css/styles.css?v=1.1">
