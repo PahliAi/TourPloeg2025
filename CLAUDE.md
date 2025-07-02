@@ -223,3 +223,6 @@ const response = await fetch(repoUrl + path + cacheBuster);
 - **File validation**: Excel structure verification before processing
 - **XSS Prevention**: Sanitized data rendering
 - **CORS Compliance**: GitHub raw file access patterns
+
+## Development Notes
+- Do not commit to git. User wants to do it himself

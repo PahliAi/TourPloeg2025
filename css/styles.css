@@ -1292,10 +1292,32 @@ table.auto-sized-table td {
     
     .stage-pills-container,
     .participant-pills-container {
-        overflow-x: auto;
-        margin-bottom: 12px;
-        scrollbar-width: none;
-        -ms-overflow-style: none;
+        display: none; /* Hide pills on mobile, use dropdowns instead */
+    }
+    
+    /* Mobile dropdown selectors */
+    .mobile-dropdown {
+        width: 100%;
+        padding: 12px 16px;
+        border-radius: 12px;
+        border: 2px solid #ddd;
+        background: white;
+        font-size: 16px; /* Prevent zoom on iOS */
+        font-weight: bold;
+        margin: 10px 0;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+        background-position: right 12px center;
+        background-repeat: no-repeat;
+        background-size: 16px;
+        padding-right: 40px;
+    }
+    
+    .mobile-dropdown:focus {
+        outline: none;
+        border-color: var(--primary-yellow);
+        box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.2);
     }
     
     .stage-pills-container::-webkit-scrollbar,

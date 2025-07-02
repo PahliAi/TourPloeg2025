@@ -96,6 +96,23 @@ function loadRidersTable() {
 }
 
 function loadMatrixTable() {
+    // First, ensure the matrix container has the proper structure
+    const matrixContainer = document.querySelector('.matrix-container');
+    if (matrixContainer && !matrixContainer.querySelector('.matrix-scroll')) {
+        matrixContainer.innerHTML = `
+            <div class="matrix-scroll">
+                <table class="matrix-table">
+                    <thead id="matrixHeader">
+                        <!-- Filled by JavaScript -->
+                    </thead>
+                    <tbody id="matrixTable">
+                        <!-- Filled by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        `;
+    }
+    
     const thead = document.getElementById('matrixHeader');
     const tbody = document.getElementById('matrixTable');
     
@@ -738,8 +755,9 @@ function updateParticipantSelector() {
         });
     }
     
-    // Also initialize mobile participant pills
+    // Also initialize mobile elements
     if (window.innerWidth <= 768) {
+        initParticipantDropdown();
         initParticipantPills();
     }
 }
@@ -1002,34 +1020,66 @@ function loadEtapesTable() {
 
 function populateEtapesDropdown() {
     const selector = document.getElementById('etapeSelector');
-    if (!selector) return;
+    const mobileSelector = document.getElementById('mobileStageDropdown');
     
-    // Clear existing options except the first one
-    selector.innerHTML = '<option value="">Kies een etappe...</option>';
-    
-    // Check if we have stage data
-    if (!window.etappeInfoData || !window.etappesWithRiderData) {
-        selector.innerHTML = '<option value="">Geen etappe data beschikbaar</option>';
-        return;
+    // Populate desktop dropdown
+    if (selector) {
+        // Clear existing options except the first one
+        selector.innerHTML = '<option value="">Kies een etappe...</option>';
+        
+        // Check if we have stage data
+        if (!window.etappeInfoData || !window.etappesWithRiderData) {
+            selector.innerHTML = '<option value="">Geen etappe data beschikbaar</option>';
+        } else {
+            // Add regular stages that have rider data
+            window.etappesWithRiderData.forEach(stageNum => {
+                if (stageNum <= 21) { // Regular stages 1-21
+                    const stageInfo = window.etappeInfoData[stageNum];
+                    const option = document.createElement('option');
+                    option.value = stageNum;
+                    option.textContent = `Etappe ${stageNum}${stageInfo ? ` - ${stageInfo.route}` : ''}`;
+                    selector.appendChild(option);
+                }
+            });
+            
+            // Add final classification if available
+            if (window.hasEindstandData) {
+                const option = document.createElement('option');
+                option.value = '22';
+                option.textContent = 'Eindklassement';
+                selector.appendChild(option);
+            }
+        }
     }
     
-    // Add regular stages that have rider data
-    window.etappesWithRiderData.forEach(stageNum => {
-        if (stageNum <= 21) { // Regular stages 1-21
-            const stageInfo = window.etappeInfoData[stageNum];
-            const option = document.createElement('option');
-            option.value = stageNum;
-            option.textContent = `Etappe ${stageNum}${stageInfo ? ` - ${stageInfo.route}` : ''}`;
-            selector.appendChild(option);
+    // Populate mobile dropdown
+    if (mobileSelector && window.innerWidth <= 768) {
+        // Clear existing options
+        mobileSelector.innerHTML = '<option value="">Kies Etappe...</option>';
+        
+        // Check if we have stage data
+        if (!window.etappeInfoData || !window.etappesWithRiderData) {
+            mobileSelector.innerHTML = '<option value="">Geen etappe data beschikbaar</option>';
+        } else {
+            // Add regular stages that have rider data
+            window.etappesWithRiderData.forEach(stageNum => {
+                if (stageNum <= 21) { // Regular stages 1-21
+                    const stageInfo = window.etappeInfoData[stageNum];
+                    const option = document.createElement('option');
+                    option.value = stageNum;
+                    option.textContent = `Etappe ${stageNum}`;
+                    mobileSelector.appendChild(option);
+                }
+            });
+            
+            // Add final classification if available
+            if (window.hasEindstandData) {
+                const option = document.createElement('option');
+                option.value = '22';
+                option.textContent = 'Eindstand';
+                mobileSelector.appendChild(option);
+            }
         }
-    });
-    
-    // Add final classification if available
-    if (window.hasEindstandData) {
-        const option = document.createElement('option');
-        option.value = '22';
-        option.textContent = 'Eindklassement';
-        selector.appendChild(option);
     }
 }
 
@@ -1044,6 +1094,18 @@ function showSelectedStage(stageValue) {
     }
     
     const stageNum = parseInt(stageValue);
+    
+    // Sync with arrow navigation state
+    if (typeof currentStageNum !== 'undefined') {
+        currentStageNum = stageNum;
+    }
+    
+    // Update mobile arrow navigation indicators
+    if (window.innerWidth <= 768) {
+        updateStageIndicators();
+        updateStageNavigationButtons();
+    }
+    
     console.log(`🗓️ Showing stage ${stageNum} details`);
     
     // Check if stage has data available
@@ -1181,7 +1243,7 @@ function displayStagePodiums(stageNum) {
     // Create podium content for each podium
     updateSelectedPodiumContent('selectedDailyPodiumPlaces', dailyRanking, stageNum === 22 ? 'total' : stageIndex);
     updateSelectedPodiumContent('selectedGeneralPodiumPlaces', generalRanking, stageNum === 22 ? 'total' : 'cumulative-' + stageIndex);
-    updateSelectedPodiumContent('selectedDailyWinsPodiumPlaces', dailyWinsRanking, 'dailywins');
+    updateSelectedPodiumContent('selectedDailyWinsPodiumPlaces', dailyWinsRanking, stageNum === 22 ? 'dailywins' : `dailywins-${stageIndex}`);
     
     podiumsContainer.style.display = 'block';
 }
@@ -1217,6 +1279,10 @@ function updateSelectedPodiumContent(podiumPlacesId, ranking, scoreType) {
             score = participant.totalPoints;
         } else if (scoreType === 'dailywins') {
             score = participant.dailyWins; // This should be calculated up to the stage
+        } else if (typeof scoreType === 'string' && scoreType.startsWith('dailywins-')) {
+            // Calculate daily wins up to specific stage
+            const stageIndex = parseInt(scoreType.split('-')[1]);
+            score = calculateDailyWinsUpToStage(participant, stageIndex);
         } else if (typeof scoreType === 'string' && scoreType.startsWith('cumulative-')) {
             // Extract stage index from 'cumulative-X' format
             const stageIndex = parseInt(scoreType.split('-')[1]);
@@ -1650,7 +1716,7 @@ function loadMobileRiderCards() {
         }
         if (a.racePosition !== null) return -1;
         if (b.racePosition !== null) return 1;
-        return b.totalPoints - a.totalPoints;
+        return (b.totalPoints || 0) - (a.totalPoints || 0);
     });
     
     ridersWithPositions.forEach((rider, index) => {
@@ -1673,7 +1739,7 @@ function loadMobileRiderCards() {
             <div class="card-stats-compact">
                 <div class="stat">
                     <span class="stat-label">Total</span>
-                    <span class="stat-value">${rider.totalPoints}</span>
+                    <span class="stat-value">${rider.totalPoints || 0}</span>
                 </div>
                 <div class="stat">
                     <span class="rider-status ${isDropped ? 'dropped' : 'active'}">
@@ -1706,17 +1772,71 @@ loadRidersTable = function() {
     }
 };
 
-// ============= MOBILE PILL SELECTORS =============
+// ============= MOBILE SELECTORS =============
 
-// Initialize mobile pill selectors
+// Initialize mobile selectors (dropdowns + pills)
 function initMobilePillSelectors() {
     if (window.innerWidth > 768) return;
     
-    // Initialize stage pills
+    // Initialize mobile dropdowns
+    initMobileDropdowns();
+    
+    // Initialize stage pills (hidden but still needed for desktop)
     initStagePills();
     
-    // Initialize participant pills
+    // Initialize participant pills (hidden but still needed for desktop)
     initParticipantPills();
+}
+
+// Initialize mobile dropdowns
+function initMobileDropdowns() {
+    // Initialize participant dropdown
+    initParticipantDropdown();
+    
+    // Initialize stage dropdown
+    initStageDropdown();
+}
+
+// Initialize participant dropdown
+function initParticipantDropdown() {
+    const dropdown = document.getElementById('mobileParticipantDropdown');
+    if (!dropdown) return;
+    
+    dropdown.innerHTML = '<option value="">Kies Equipe...</option>';
+    
+    participants.forEach(participant => {
+        const option = document.createElement('option');
+        option.value = participant.name;
+        option.textContent = participant.name;
+        dropdown.appendChild(option);
+    });
+}
+
+// Initialize stage dropdown
+function initStageDropdown() {
+    const dropdown = document.getElementById('mobileStageDropdown');
+    if (!dropdown) return;
+    
+    dropdown.innerHTML = '<option value="">Kies Etappe...</option>';
+    
+    const maxAvailableStage = Math.min(currentStage, 21);
+    const hasEindstand = window.hasEindstandData || currentStage >= 22;
+    
+    // Regular stages
+    for (let i = 1; i <= maxAvailableStage; i++) {
+        const option = document.createElement('option');
+        option.value = i;
+        option.textContent = `Etappe ${i}`;
+        dropdown.appendChild(option);
+    }
+    
+    // Final classification if available
+    if (hasEindstand) {
+        const option = document.createElement('option');
+        option.value = 22;
+        option.textContent = 'Eindstand';
+        dropdown.appendChild(option);
+    }
 }
 
 // Initialize stage pills
@@ -1856,15 +1976,23 @@ function showMobileParticipantTeam(participantName) {
     teamDisplay.innerHTML = `
         <h3>${participant.name}'s Equipe</h3>
         <div class="mobile-team-grid">
-            ${participant.team.map((rider, index) => `
-                <div class="mobile-team-rider">
-                    <span class="rider-name">${rider.name}</span>
-                    <span class="rider-points">${rider.totalPoints} pts</span>
-                    <span class="rider-status ${rider.status === 'dropped' ? 'dropped' : 'active'}">
-                        ${rider.status === 'dropped' ? '🔴' : '🟢'}
-                    </span>
-                </div>
-            `).join('')}
+            ${participant.team.map((rider, index) => {
+                // Safely get rider data from global allRiders array to prevent data corruption
+                const globalRider = allRiders.find(r => r.name === rider.name);
+                const riderData = globalRider || rider;
+                const totalPoints = riderData.totalPoints || 0;
+                const status = riderData.status || 'active';
+                
+                return `
+                    <div class="mobile-team-rider">
+                        <span class="rider-name">${rider.name}</span>
+                        <span class="rider-points">${totalPoints} pts</span>
+                        <span class="rider-status ${status === 'dropped' ? 'dropped' : 'active'}">
+                            ${status === 'dropped' ? '🔴' : '🟢'}
+                        </span>
+                    </div>
+                `;
+            }).join('')}
         </div>
     `;
     

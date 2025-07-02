@@ -247,12 +247,15 @@
                 
                 <!-- Mobile Participant Selector -->
                 <div class="participant-selector-mobile" id="participantSelectorMobile">
+                    <select class="mobile-dropdown" id="mobileParticipantDropdown" onchange="showSelectedParticipantTeam(this.value)">
+                        <option value="">Kies Equipe...</option>
+                    </select>
                     <div class="participant-pills-container">
                         <div class="participant-pills" id="participantPills">
                             <!-- Filled by JavaScript -->
                         </div>
                     </div>
-                    <div class="current-selection">
+                    <div class="current-selection" style="display: none;">
                         <span class="selection-text" id="currentParticipantDisplay">Kies Equipe</span>
                     </div>
                 </div>
@@ -348,6 +351,9 @@
                 
                 <!-- Mobile Stage Selector -->
                 <div class="stage-selector-mobile" id="stageSelectorMobile">
+                    <select class="mobile-dropdown" id="mobileStageDropdown" onchange="showSelectedStage(this.value)">
+                        <option value="">Kies Etappe...</option>
+                    </select>
                     <div class="stage-pills-container">
                         <div class="stage-pills" id="stagePills">
                             <!-- Filled by JavaScript -->

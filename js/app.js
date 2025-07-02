@@ -180,6 +180,13 @@ function showTab(tabName) {
             break;
         case 'matrix':
             loadMatrixTable();
+            // Reset participant selector on mobile
+            if (window.innerWidth <= 768) {
+                const currentDisplay = document.getElementById('currentParticipantDisplay');
+                if (currentDisplay) {
+                    currentDisplay.textContent = 'Kies Equipe';
+                }
+            }
             break;
         case 'daily-prizes':
             loadDailyPrizesTable();
