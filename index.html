@@ -190,7 +190,14 @@
         <div id="riders" class="tab-content">
             <div class="card">
                 <h2>🚴 Pedaleurs</h2>
-                <div class="table-container">
+                
+                <!-- Mobile Cards Container -->
+                <div class="mobile-cards-container" id="mobileRiderCards">
+                    <!-- Filled by JavaScript -->
+                </div>
+                
+                <!-- Desktop Table -->
+                <div class="table-container desktop-table">
                     <div class="table-scroll">
                         <table>
                             <thead>
@@ -222,10 +229,21 @@
                 
                 <!-- Participant Selector -->
                 <div style="display: flex; align-items: center; justify-content: center; gap: 15px; margin: 20px 0;">
-                    <label for="participantSelector" style="font-size: 1.1em; font-weight: bold; white-space: nowrap;">Kies een deelnemer om zijn/haar Equipe te zien:</label>
-                    <select id="participantSelector" onchange="showSelectedParticipantTeam(this.value)" style="padding: 15px 25px; border-radius: 25px; border: 2px solid #ddd; font-size: 1.1em; font-weight: bold; min-width: 250px; background: white;">
-                        <option value="">Selecteer een deelnemer...</option>
+                    <select id="participantSelector" onchange="showSelectedParticipantTeam(this.value); this.style.display='none';" style="padding: 10px 15px; border-radius: 15px; border: 2px solid #ddd; font-size: 0.9em; font-weight: bold; min-width: 200px; background: white;" class="desktop-only">
+                        <option value="">Kies Equipe...</option>
                     </select>
+                </div>
+                
+                <!-- Mobile Participant Selector -->
+                <div class="participant-selector-mobile" id="participantSelectorMobile">
+                    <div class="participant-pills-container">
+                        <div class="participant-pills" id="participantPills">
+                            <!-- Filled by JavaScript -->
+                        </div>
+                    </div>
+                    <div class="current-selection">
+                        <span class="selection-text" id="currentParticipantDisplay">Kies Equipe</span>
+                    </div>
                 </div>
                 
                 <div class="matrix-container">
@@ -247,7 +265,14 @@
         <div id="daily-prizes" class="tab-content">
             <div class="card">
                 <h2><img src="milka-nb.png" alt="🏆" style="height: 24px; vertical-align: middle;"> Classement général</h2>
-                <div class="table-container">
+                
+                <!-- Mobile Cards Container -->
+                <div class="mobile-cards-container" id="mobileParticipantCards">
+                    <!-- Filled by JavaScript -->
+                </div>
+                
+                <!-- Desktop Table -->
+                <div class="table-container desktop-table">
                     <div class="table-scroll">
                         <table>
                             <thead>
@@ -305,10 +330,23 @@
                 
                 <!-- Stage Selector -->
                 <div style="display: flex; align-items: center; justify-content: center; gap: 15px; margin: 20px 0;">
-                    <label for="etapeSelector" style="font-size: 1.1em; font-weight: bold; white-space: nowrap;">Selecteer een etappe:</label>
-                    <select id="etapeSelector" onchange="showSelectedStage(this.value)" style="padding: 15px 25px; border-radius: 25px; border: 2px solid #ddd; font-size: 1.1em; font-weight: bold; min-width: 250px; background: white;">
-                        <option value="">Kies een etappe...</option>
+                    <select id="etapeSelector" onchange="showSelectedStage(this.value); this.style.display='none';" style="padding: 10px 15px; border-radius: 15px; border: 2px solid #ddd; font-size: 0.9em; font-weight: bold; min-width: 200px; background: white;" class="desktop-only">
+                        <option value="">Kies Etappe...</option>
                     </select>
+                </div>
+                
+                <!-- Mobile Stage Selector -->
+                <div class="stage-selector-mobile" id="stageSelectorMobile">
+                    <div class="stage-pills-container">
+                        <div class="stage-pills" id="stagePills">
+                            <!-- Filled by JavaScript -->
+                        </div>
+                    </div>
+                    <div class="stage-navigation">
+                        <button class="nav-arrow prev" onclick="navigateStagePrev()" id="prevStageBtn">‹</button>
+                        <span class="current-stage" id="currentStageDisplay">Kies Etappe</span>
+                        <button class="nav-arrow next" onclick="navigateStageNext()" id="nextStageBtn">›</button>
+                    </div>
                 </div>
 
                 <!-- Selected Stage Info -->
@@ -474,6 +512,80 @@
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Mobile Bottom Navigation -->
+    <div class="mobile-bottom-nav" id="mobileBottomNav">
+        <button class="mobile-tab active" data-tab="home" onclick="showTab('home'); setActiveMobileTab(this)">
+            <span class="tab-icon">🏠</span>
+            <span class="tab-label">Home</span>
+        </button>
+        <button class="mobile-tab" data-tab="matrix" onclick="showTab('matrix'); setActiveMobileTab(this)">
+            <span class="tab-icon">📊</span>
+            <span class="tab-label">Equipes</span>
+        </button>
+        <button class="mobile-tab" data-tab="daily-prizes" onclick="showTab('daily-prizes'); setActiveMobileTab(this)">
+            <span class="tab-icon">🏆</span>
+            <span class="tab-label">Ranking</span>
+        </button>
+        <button class="mobile-tab" data-tab="etapes" onclick="showTab('etapes'); setActiveMobileTab(this)">
+            <span class="tab-icon">🗓️</span>
+            <span class="tab-label">Etapes</span>
+        </button>
+        <button class="mobile-tab" id="moreTab" onclick="toggleMobileDrawer()">
+            <span class="tab-icon">⋯</span>
+            <span class="tab-label">More</span>
+        </button>
+    </div>
+
+    <!-- Mobile Drawer for Secondary Items -->
+    <div class="mobile-drawer" id="mobileDrawer">
+        <div class="drawer-overlay" onclick="closeMobileDrawer()"></div>
+        <div class="drawer-content">
+            <div class="drawer-header">
+                <h3>More Options</h3>
+                <button class="drawer-close" onclick="closeMobileDrawer()">&times;</button>
+            </div>
+            <div class="drawer-items">
+                <button class="drawer-item" onclick="showTab('riders'); closeMobileDrawer()">
+                    <span class="drawer-icon">🚴</span>
+                    <span class="drawer-label">Pedaleurs</span>
+                </button>
+                <button class="drawer-item" onclick="showTab('ranking'); closeMobileDrawer()">
+                    <span class="drawer-icon">📈</span>
+                    <span class="drawer-label">Ranking</span>
+                </button>
+                <button class="drawer-item" onclick="showTab('historie'); closeMobileDrawer()">
+                    <span class="drawer-icon">📚</span>
+                    <span class="drawer-label">Histoire</span>
+                </button>
+                <button class="drawer-item" onclick="showTab('upload'); closeMobileDrawer()">
+                    <span class="drawer-icon">📊</span>
+                    <span class="drawer-label">Upload</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Action Button -->
+    <div class="fab-container" id="fabContainer">
+        <button class="fab main-fab" id="mainFab" onclick="toggleFabMenu()">
+            <span class="fab-icon">+</span>
+        </button>
+        <div class="fab-menu" id="fabMenu">
+            <button class="fab secondary-fab" onclick="document.getElementById('excelFile').click(); closeFabMenu();" title="Upload Excel">
+                <span class="fab-icon">📊</span>
+                <span class="fab-label">Upload</span>
+            </button>
+            <button class="fab secondary-fab" onclick="exportData(); closeFabMenu();" title="Export Data">
+                <span class="fab-icon">💾</span>
+                <span class="fab-label">Export</span>
+            </button>
+            <button class="fab secondary-fab" onclick="downloadExample(); closeFabMenu();" title="Download Example">
+                <span class="fab-icon">📥</span>
+                <span class="fab-label">Voorbeeld</span>
+            </button>
         </div>
     </div>
 

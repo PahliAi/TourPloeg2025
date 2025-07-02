@@ -740,15 +740,21 @@ function updateParticipantSelector() {
 }
 
 function showSelectedParticipantTeam(participantName) {
-    if (!participantName) return;
+    if (!participantName) {
+        // Show dropdown again if nothing selected
+        document.getElementById('participantSelector').style.display = 'block';
+        return;
+    }
     
     // Use the existing showParticipantDetail function to show in modal
     showParticipantDetail(participantName);
     
-    // Reset the dropdown to default
+    // Reset the dropdown to default after a delay
     setTimeout(() => {
-        document.getElementById('participantSelector').value = '';
-    }, 100);
+        const selector = document.getElementById('participantSelector');
+        selector.value = '';
+        selector.style.display = 'block';
+    }, 2000);
 }
 
 // Universal table auto-sizing system
@@ -1024,10 +1030,11 @@ function populateEtapesDropdown() {
 
 function showSelectedStage(stageValue) {
     if (!stageValue) {
-        // Hide all stage-specific content
+        // Hide all stage-specific content and show dropdown again
         document.getElementById('selectedStageInfo').style.display = 'none';
         document.getElementById('selectedStagePodiums').style.display = 'none';
         document.getElementById('stageResultsContainer').style.display = 'none';
+        document.getElementById('etapeSelector').style.display = 'block';
         return;
     }
     
@@ -1042,6 +1049,13 @@ function showSelectedStage(stageValue) {
     
     // Show stage results tables
     displayStageResults(stageNum);
+    
+    // Reset the dropdown to default after a delay
+    setTimeout(() => {
+        const selector = document.getElementById('etapeSelector');
+        selector.value = '';
+        selector.style.display = 'block';
+    }, 3000);
 }
 
 function displayStageInfo(stageNum) {
@@ -1456,3 +1470,367 @@ function displayStageParticipantsTable(stageNum) {
         tbody.appendChild(row);
     });
 }
+
+// ============= MOBILE CARDS SYSTEM =============
+
+// Load mobile participant cards
+function loadMobileParticipantCards() {
+    const container = document.getElementById('mobileParticipantCards');
+    if (!container) return;
+    
+    if (participants.length === 0) {
+        container.innerHTML = `
+            <div style="text-align: center; padding: 40px; color: #666;">
+                📁 Upload eerst een ploegen bestand
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = '';
+    
+    // Sort participants by total points
+    const sortedParticipants = [...participants].sort((a, b) => b.totalPoints - a.totalPoints);
+    
+    // Calculate daily winners for jersey counts
+    const dailyWinners = [];
+    const generalLeaders = [];
+    
+    for (let stage = 0; stage < currentStage; stage++) {
+        // Calculate daily winner
+        let maxPoints = 0;
+        let winner = null;
+        
+        participants.forEach(participant => {
+            const stagePoints = participant.stagePoints[stage] || 0;
+            if (stagePoints > maxPoints) {
+                maxPoints = stagePoints;
+                winner = participant.name;
+            }
+        });
+        
+        dailyWinners[stage] = winner;
+        
+        // Calculate general classification leader up to this stage
+        let leaderPoints = 0;
+        let leader = null;
+        
+        participants.forEach(participant => {
+            const totalUpToStage = participant.stagePoints.slice(0, stage + 1).reduce((sum, p) => sum + p, 0);
+            if (totalUpToStage > leaderPoints) {
+                leaderPoints = totalUpToStage;
+                leader = participant.name;
+            }
+        });
+        
+        generalLeaders[stage] = leader;
+    }
+    
+    sortedParticipants.forEach((participant, index) => {
+        // Count jerseys
+        let blueJerseys = 0;
+        let yellowJerseys = 0;
+        
+        for (let stage = 0; stage < currentStage; stage++) {
+            if (dailyWinners[stage] === participant.name) blueJerseys++;
+            if (generalLeaders[stage] === participant.name) yellowJerseys++;
+        }
+        
+        const position = index + 1;
+        const isTopThree = position <= 3;
+        
+        const card = document.createElement('div');
+        card.className = 'participant-card';
+        card.onclick = () => showParticipantDetail(participant.name);
+        
+        card.innerHTML = `
+            <div class="card-header">
+                <h3>${participant.name}</h3>
+                <span class="position-badge ${isTopThree ? 'top-3' : ''}">#${position}</span>
+            </div>
+            <div class="card-stats">
+                <div class="stat">
+                    <span class="stat-label">Total</span>
+                    <span class="stat-value">${participant.totalPoints}</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">🔵 Blauw</span>
+                    <span class="stat-value">${blueJerseys}</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">🟡 Geel</span>
+                    <span class="stat-value">${yellowJerseys}</span>
+                </div>
+            </div>
+            <button class="card-action">
+                Bekijk Equipe
+            </button>
+        `;
+        
+        container.appendChild(card);
+    });
+    
+    console.log(`📱 Loaded ${sortedParticipants.length} participant cards`);
+}
+
+// Load mobile rider cards
+function loadMobileRiderCards() {
+    const container = document.getElementById('mobileRiderCards');
+    if (!container) return;
+    
+    if (allRiders.length === 0) {
+        container.innerHTML = `
+            <div style="text-align: center; padding: 40px; color: #666;">
+                📁 Upload eerst een ploegen bestand
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = '';
+    
+    // Get race positions from Excel data for proper ordering
+    const ridersWithPositions = allRiders.map(rider => {
+        let racePosition = null;
+        
+        // Get position from final classification if available
+        if (window.hasEindstandData && window.racePositions && window.racePositions[rider.name]) {
+            racePosition = window.racePositions[rider.name];
+        }
+        
+        return {
+            ...rider,
+            racePosition: racePosition
+        };
+    });
+    
+    // Sort by race position if available, otherwise by points (which represents current GC)
+    ridersWithPositions.sort((a, b) => {
+        if (a.racePosition !== null && b.racePosition !== null) {
+            return a.racePosition - b.racePosition;
+        }
+        if (a.racePosition !== null) return -1;
+        if (b.racePosition !== null) return 1;
+        return b.totalPoints - a.totalPoints;
+    });
+    
+    ridersWithPositions.forEach((rider, index) => {
+        const position = index + 1;
+        const isTopThree = position <= 3;
+        const isDropped = rider.status === 'dropped';
+        
+        // Get last few stage points for trend
+        const recentStages = rider.points.slice(-3).filter(p => p > 0);
+        const recentPoints = recentStages.length > 0 ? Math.max(...recentStages) : 0;
+        
+        const card = document.createElement('div');
+        card.className = 'rider-card';
+        
+        card.innerHTML = `
+            <div class="card-header">
+                <h3>${rider.name}</h3>
+                <span class="position-badge ${isTopThree ? 'top-3' : ''}">#${position}</span>
+            </div>
+            <div class="card-stats">
+                <div class="stat">
+                    <span class="stat-label">Total</span>
+                    <span class="stat-value">${rider.totalPoints}</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Recent</span>
+                    <span class="stat-value">${recentPoints}</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Status</span>
+                    <span class="rider-status ${isDropped ? 'dropped' : 'active'}">
+                        ${isDropped ? '🔴 Uit' : '🟢 Actief'}
+                    </span>
+                </div>
+            </div>
+        `;
+        
+        container.appendChild(card);
+    });
+    
+    console.log(`📱 Loaded ${ridersWithPositions.length} rider cards`);
+}
+
+// Enhance existing table loading functions to also load mobile cards
+const originalLoadDailyPrizesTable = loadDailyPrizesTable;
+loadDailyPrizesTable = function() {
+    originalLoadDailyPrizesTable();
+    if (window.innerWidth <= 768) {
+        loadMobileParticipantCards();
+    }
+};
+
+const originalLoadRidersTable = loadRidersTable;
+loadRidersTable = function() {
+    originalLoadRidersTable();
+    if (window.innerWidth <= 768) {
+        loadMobileRiderCards();
+    }
+};
+
+// ============= MOBILE PILL SELECTORS =============
+
+// Initialize mobile pill selectors
+function initMobilePillSelectors() {
+    if (window.innerWidth > 768) return;
+    
+    // Initialize stage pills
+    initStagePills();
+    
+    // Initialize participant pills
+    initParticipantPills();
+}
+
+// Initialize stage pills
+function initStagePills() {
+    const container = document.getElementById('stagePills');
+    if (!container) return;
+    
+    container.innerHTML = '';
+    
+    // Add stage pills 1-21
+    for (let i = 1; i <= 21; i++) {
+        const pill = document.createElement('button');
+        pill.className = 'stage-pill';
+        pill.dataset.stage = i;
+        pill.textContent = `Et ${i}`;
+        pill.onclick = () => selectStagePill(i);
+        container.appendChild(pill);
+    }
+    
+    // Add final classification pill
+    const finalPill = document.createElement('button');
+    finalPill.className = 'stage-pill final';
+    finalPill.dataset.stage = '22';
+    finalPill.textContent = 'Eind';
+    finalPill.onclick = () => selectStagePill(22);
+    container.appendChild(finalPill);
+    
+    console.log('📱 Stage pills initialized');
+}
+
+// Initialize participant pills
+function initParticipantPills() {
+    const container = document.getElementById('participantPills');
+    if (!container || participants.length === 0) return;
+    
+    container.innerHTML = '';
+    
+    participants.forEach(participant => {
+        const pill = document.createElement('button');
+        pill.className = 'participant-pill';
+        pill.dataset.participant = participant.name;
+        pill.textContent = participant.name;
+        pill.onclick = () => selectParticipantPill(participant.name);
+        container.appendChild(pill);
+    });
+    
+    console.log('📱 Participant pills initialized');
+}
+
+// Handle stage pill selection
+function selectStagePill(stageNum) {
+    // Update active states
+    document.querySelectorAll('.stage-pill').forEach(pill => {
+        pill.classList.remove('active');
+    });
+    
+    const selectedPill = document.querySelector(`.stage-pill[data-stage="${stageNum}"]`);
+    if (selectedPill) {
+        selectedPill.classList.add('active');
+        
+        // Scroll to active pill
+        selectedPill.scrollIntoView({
+            behavior: 'smooth',
+            block: 'nearest',
+            inline: 'center'
+        });
+    }
+    
+    // Update current stage display
+    currentStageNum = stageNum;
+    updateStageIndicators();
+    
+    // Update navigation buttons
+    updateStageNavigationButtons();
+    
+    // Show stage content
+    showSelectedStage(stageNum.toString());
+    
+    console.log(`📱 Selected stage ${stageNum}`);
+}
+
+// Handle participant pill selection
+function selectParticipantPill(participantName) {
+    // Update active states
+    document.querySelectorAll('.participant-pill').forEach(pill => {
+        pill.classList.remove('active');
+    });
+    
+    const selectedPill = document.querySelector(`.participant-pill[data-participant="${participantName}"]`);
+    if (selectedPill) {
+        selectedPill.classList.add('active');
+        
+        // Scroll to active pill
+        selectedPill.scrollIntoView({
+            behavior: 'smooth',
+            block: 'nearest',
+            inline: 'center'
+        });
+    }
+    
+    // Update current selection display
+    const display = document.getElementById('currentParticipantDisplay');
+    if (display) {
+        display.textContent = participantName;
+    }
+    
+    // Show participant team
+    showSelectedParticipantTeam(participantName);
+    
+    console.log(`📱 Selected participant ${participantName}`);
+}
+
+// Update stage navigation buttons
+function updateStageNavigationButtons() {
+    const prevBtn = document.getElementById('prevStageBtn');
+    const nextBtn = document.getElementById('nextStageBtn');
+    
+    if (prevBtn) {
+        prevBtn.disabled = currentStageNum <= 1;
+    }
+    
+    if (nextBtn) {
+        nextBtn.disabled = currentStageNum >= 22;
+    }
+}
+
+// Enhance existing functions to initialize pills
+const originalPopulateEtapeSelector = populateEtapeSelector;
+populateEtapeSelector = function() {
+    originalPopulateEtapeSelector();
+    if (window.innerWidth <= 768) {
+        initStagePills();
+    }
+};
+
+const originalPopulateParticipantSelector = populateParticipantSelector;
+populateParticipantSelector = function() {
+    originalPopulateParticipantSelector();
+    if (window.innerWidth <= 768) {
+        initParticipantPills();
+    }
+};
+
+// Initialize pills when DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+    if (window.innerWidth <= 768) {
+        setTimeout(() => {
+            initMobilePillSelectors();
+        }, 1000); // Wait for data to load
+    }
+});

@@ -146,9 +146,24 @@ function showTab(tabName) {
     document.querySelectorAll('.nav-tab').forEach(tab => {
         tab.classList.remove('active');
     });
+    
+    // Also handle mobile tabs
+    document.querySelectorAll('.mobile-tab').forEach(tab => {
+        tab.classList.remove('active');
+    });
 
     document.getElementById(tabName).classList.add('active');
-    event.target.classList.add('active');
+    
+    // Handle desktop nav tab activation
+    if (event && event.target && event.target.classList.contains('nav-tab')) {
+        event.target.classList.add('active');
+    }
+    
+    // Handle mobile tab activation
+    const activeMobileTab = document.querySelector(`.mobile-tab[data-tab="${tabName}"]`);
+    if (activeMobileTab) {
+        activeMobileTab.classList.add('active');
+    }
 
     // Special animation for Home tab
     if (tabName === 'home') {
@@ -931,6 +946,252 @@ async function loadHistorieYear(year) {
         }, 3000);
     }
 }
+
+// ============= MOBILE NAVIGATION FUNCTIONS =============
+
+// Mobile navigation functions
+function setActiveMobileTab(tabElement) {
+    // Remove active from all mobile tabs
+    document.querySelectorAll('.mobile-tab').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    
+    // Add active to clicked tab
+    tabElement.classList.add('active');
+}
+
+function toggleMobileDrawer() {
+    const drawer = document.getElementById('mobileDrawer');
+    drawer.classList.toggle('active');
+    
+    // Prevent body scroll when drawer is open
+    if (drawer.classList.contains('active')) {
+        document.body.style.overflow = 'hidden';
+    } else {
+        document.body.style.overflow = '';
+    }
+}
+
+function closeMobileDrawer() {
+    const drawer = document.getElementById('mobileDrawer');
+    drawer.classList.remove('active');
+    document.body.style.overflow = '';
+}
+
+// Floating Action Button functions
+function toggleFabMenu() {
+    const mainFab = document.getElementById('mainFab');
+    const fabMenu = document.getElementById('fabMenu');
+    
+    mainFab.classList.toggle('active');
+    fabMenu.classList.toggle('active');
+}
+
+function closeFabMenu() {
+    const mainFab = document.getElementById('mainFab');
+    const fabMenu = document.getElementById('fabMenu');
+    
+    mainFab.classList.remove('active');
+    fabMenu.classList.remove('active');
+}
+
+function downloadExample() {
+    const link = document.createElement('a');
+    link.href = 'tdf-current.xlsx';
+    link.download = 'TourDeFrance_Voorbeeld.xlsx';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    console.log('📥 Example file download triggered');
+}
+
+// ============= MOBILE GESTURES & INTERACTIONS =============
+
+// Global gesture variables
+let touchStartX = 0;
+let touchStartY = 0;
+let touchEndX = 0;
+let touchEndY = 0;
+let isPulling = false;
+let pullDistance = 0;
+let currentStageNum = 1;
+let maxStageNum = 22;
+
+// Initialize mobile gestures
+function initMobileGestures() {
+    // Only add gestures on mobile
+    if (window.innerWidth > 768) return;
+    
+    document.addEventListener('touchstart', handleTouchStart, { passive: false });
+    document.addEventListener('touchmove', handleTouchMove, { passive: false });
+    document.addEventListener('touchend', handleTouchEnd, { passive: false });
+    
+    console.log('🎮 Mobile gestures initialized');
+}
+
+function handleTouchStart(e) {
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+    
+    // Check if we're at the top for pull-to-refresh
+    if (window.scrollY === 0 && touchStartY < 100) {
+        isPulling = true;
+    }
+}
+
+function handleTouchMove(e) {
+    if (!e.touches[0]) return;
+    
+    const currentX = e.touches[0].clientX;
+    const currentY = e.touches[0].clientY;
+    
+    // Handle pull-to-refresh
+    if (isPulling && window.scrollY === 0) {
+        pullDistance = currentY - touchStartY;
+        if (pullDistance > 0 && pullDistance < 120) {
+            showPullToRefreshIndicator(pullDistance);
+            e.preventDefault(); // Prevent scroll
+        }
+    }
+}
+
+function handleTouchEnd(e) {
+    if (!e.changedTouches[0]) return;
+    
+    touchEndX = e.changedTouches[0].clientX;
+    touchEndY = e.changedTouches[0].clientY;
+    
+    const deltaX = touchEndX - touchStartX;
+    const deltaY = touchEndY - touchStartY;
+    
+    // Handle pull-to-refresh
+    if (isPulling) {
+        if (pullDistance > 60) {
+            triggerRefresh();
+        }
+        hidePullToRefreshIndicator();
+        isPulling = false;
+        pullDistance = 0;
+        return;
+    }
+    
+    // Handle horizontal swipes (only in etapes tab)
+    const activeTab = document.querySelector('.tab-content.active');
+    if (activeTab && activeTab.id === 'etapes') {
+        if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
+            if (deltaX > 0) {
+                // Swipe right - previous stage
+                navigateStagePrev();
+            } else {
+                // Swipe left - next stage  
+                navigateStageNext();
+            }
+        }
+    }
+}
+
+function showPullToRefreshIndicator(distance) {
+    let indicator = document.getElementById('pullToRefreshIndicator');
+    if (!indicator) {
+        indicator = document.createElement('div');
+        indicator.id = 'pullToRefreshIndicator';
+        indicator.innerHTML = `
+            <div class="pull-indicator">
+                <div class="pull-icon">↓</div>
+                <div class="pull-text">Trek om te vernieuwen</div>
+            </div>
+        `;
+        document.body.insertBefore(indicator, document.body.firstChild);
+    }
+    
+    const opacity = Math.min(distance / 60, 1);
+    const rotation = distance * 2;
+    
+    indicator.style.display = 'block';
+    indicator.style.opacity = opacity;
+    indicator.querySelector('.pull-icon').style.transform = `rotate(${rotation}deg)`;
+    
+    if (distance > 60) {
+        indicator.querySelector('.pull-text').textContent = 'Loslaten om te vernieuwen';
+        indicator.querySelector('.pull-icon').textContent = '↻';
+    }
+}
+
+function hidePullToRefreshIndicator() {
+    const indicator = document.getElementById('pullToRefreshIndicator');
+    if (indicator) {
+        indicator.style.display = 'none';
+    }
+}
+
+function triggerRefresh() {
+    console.log('🔄 Pull-to-refresh triggered');
+    
+    // Show loading state
+    const indicator = document.getElementById('pullToRefreshIndicator');
+    if (indicator) {
+        indicator.querySelector('.pull-text').textContent = 'Vernieuwen...';
+        indicator.querySelector('.pull-icon').textContent = '⟳';
+    }
+    
+    // Simulate refresh (reload current data)
+    setTimeout(() => {
+        // Trigger data reload based on current tab
+        const activeTab = document.querySelector('.tab-content.active');
+        if (activeTab) {
+            showTab(activeTab.id);
+        }
+        
+        hidePullToRefreshIndicator();
+        console.log('✅ Refresh complete');
+    }, 1000);
+}
+
+// Stage navigation functions
+function navigateStageNext() {
+    if (currentStageNum < maxStageNum) {
+        currentStageNum++;
+        showSelectedStage(currentStageNum.toString());
+        updateStageIndicators();
+        console.log(`➡️ Next stage: ${currentStageNum}`);
+    }
+}
+
+function navigateStagePrev() {
+    if (currentStageNum > 1) {
+        currentStageNum--;
+        showSelectedStage(currentStageNum.toString());
+        updateStageIndicators();
+        console.log(`⬅️ Previous stage: ${currentStageNum}`);
+    }
+}
+
+function updateStageIndicators() {
+    // Update stage pills if they exist
+    const pills = document.querySelectorAll('.stage-pill');
+    pills.forEach(pill => {
+        pill.classList.remove('active');
+        if (parseInt(pill.dataset.stage) === currentStageNum) {
+            pill.classList.add('active');
+        }
+    });
+    
+    // Update current stage display
+    const currentStageDisplay = document.querySelector('.current-stage');
+    if (currentStageDisplay) {
+        if (currentStageNum === 22) {
+            currentStageDisplay.textContent = 'Eindklassement';
+        } else {
+            currentStageDisplay.textContent = `Etappe ${currentStageNum}`;
+        }
+    }
+}
+
+// Initialize gestures when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    initMobileGestures();
+});
 
 async function returnToCurrentYear() {
     console.log('🔙 Returning to current year...');
