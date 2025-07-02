@@ -517,26 +517,42 @@
 
     <!-- Mobile Bottom Navigation -->
     <div class="mobile-bottom-nav" id="mobileBottomNav">
-        <button class="mobile-tab active" data-tab="home" onclick="showTab('home'); setActiveMobileTab(this)">
-            <span class="tab-icon">🏠</span>
-            <span class="tab-label">Home</span>
-        </button>
-        <button class="mobile-tab" data-tab="matrix" onclick="showTab('matrix'); setActiveMobileTab(this)">
-            <span class="tab-icon">📊</span>
-            <span class="tab-label">Equipes</span>
-        </button>
-        <button class="mobile-tab" data-tab="daily-prizes" onclick="showTab('daily-prizes'); setActiveMobileTab(this)">
-            <span class="tab-icon">🏆</span>
-            <span class="tab-label">Ranking</span>
-        </button>
-        <button class="mobile-tab" data-tab="etapes" onclick="showTab('etapes'); setActiveMobileTab(this)">
-            <span class="tab-icon">🗓️</span>
-            <span class="tab-label">Etapes</span>
-        </button>
-        <button class="mobile-tab" id="moreTab" onclick="toggleMobileDrawer()">
-            <span class="tab-icon">⋯</span>
-            <span class="tab-label">More</span>
-        </button>
+        <div class="nav-container" id="navContainer">
+            <button class="mobile-tab active" data-tab="home" onclick="showTab('home'); setActiveMobileTab(this)">
+                <span class="tab-icon">🏠</span>
+                <span class="tab-label">Home</span>
+            </button>
+            <button class="mobile-tab" data-tab="matrix" onclick="showTab('matrix'); setActiveMobileTab(this)">
+                <span class="tab-icon">📊</span>
+                <span class="tab-label">Equipes</span>
+            </button>
+            <button class="mobile-tab" data-tab="daily-prizes" onclick="showTab('daily-prizes'); setActiveMobileTab(this)">
+                <span class="tab-icon"><img src="milka-nb.png" alt="🏆" style="height: 16px; vertical-align: middle;"></span>
+                <span class="tab-label">Classement</span>
+            </button>
+            <button class="mobile-tab" data-tab="etapes" onclick="showTab('etapes'); setActiveMobileTab(this)">
+                <span class="tab-icon">🗓️</span>
+                <span class="tab-label">Etapes</span>
+            </button>
+            <!-- Secondary tabs (swipe to reveal) -->
+            <button class="mobile-tab secondary" data-tab="riders" onclick="showTab('riders'); setActiveMobileTab(this)">
+                <span class="tab-icon">🚴</span>
+                <span class="tab-label">Pedaleurs</span>
+            </button>
+            <button class="mobile-tab secondary" data-tab="ranking" onclick="showTab('ranking'); setActiveMobileTab(this)">
+                <span class="tab-icon">📈</span>
+                <span class="tab-label">Ranking</span>
+            </button>
+            <button class="mobile-tab secondary" data-tab="historie" onclick="showTab('historie'); setActiveMobileTab(this)">
+                <span class="tab-icon">📚</span>
+                <span class="tab-label">Histoire</span>
+            </button>
+            <button class="mobile-tab secondary" data-tab="upload" onclick="showTab('upload'); setActiveMobileTab(this)">
+                <span class="tab-icon">📊</span>
+                <span class="tab-label">Upload</span>
+            </button>
+        </div>
+        <div class="nav-indicator" id="navIndicator"></div>
     </div>
 
     <!-- Mobile Drawer for Secondary Items -->

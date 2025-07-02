@@ -1562,9 +1562,6 @@ function loadMobileParticipantCards() {
                     <span class="stat-value">${yellowJerseys}</span>
                 </div>
             </div>
-            <button class="card-action">
-                Bekijk Equipe
-            </button>
         `;
         
         container.appendChild(card);
@@ -1631,17 +1628,12 @@ function loadMobileRiderCards() {
                 <h3>${rider.name}</h3>
                 <span class="position-badge ${isTopThree ? 'top-3' : ''}">#${position}</span>
             </div>
-            <div class="card-stats">
+            <div class="card-stats-compact">
                 <div class="stat">
                     <span class="stat-label">Total</span>
                     <span class="stat-value">${rider.totalPoints}</span>
                 </div>
                 <div class="stat">
-                    <span class="stat-label">Recent</span>
-                    <span class="stat-value">${recentPoints}</span>
-                </div>
-                <div class="stat">
-                    <span class="stat-label">Status</span>
                     <span class="rider-status ${isDropped ? 'dropped' : 'active'}">
                         ${isDropped ? '🔴 Uit' : '🟢 Actief'}
                     </span>
@@ -1692,8 +1684,11 @@ function initStagePills() {
     
     container.innerHTML = '';
     
-    // Add stage pills 1-21
-    for (let i = 1; i <= 21; i++) {
+    // Only show stages up to currentStage
+    const maxStage = Math.min(currentStage, 21);
+    
+    // Add stage pills 1 to current stage
+    for (let i = 1; i <= maxStage; i++) {
         const pill = document.createElement('button');
         pill.className = 'stage-pill';
         pill.dataset.stage = i;
@@ -1702,15 +1697,17 @@ function initStagePills() {
         container.appendChild(pill);
     }
     
-    // Add final classification pill
-    const finalPill = document.createElement('button');
-    finalPill.className = 'stage-pill final';
-    finalPill.dataset.stage = '22';
-    finalPill.textContent = 'Eind';
-    finalPill.onclick = () => selectStagePill(22);
-    container.appendChild(finalPill);
+    // Add final classification pill only if we have final results
+    if (window.hasEindstandData || currentStage >= 22) {
+        const finalPill = document.createElement('button');
+        finalPill.className = 'stage-pill final';
+        finalPill.dataset.stage = '22';
+        finalPill.textContent = 'Eind';
+        finalPill.onclick = () => selectStagePill(22);
+        container.appendChild(finalPill);
+    }
     
-    console.log('📱 Stage pills initialized');
+    console.log(`📱 Stage pills initialized (showing ${maxStage} stages)`);
 }
 
 // Initialize participant pills
@@ -1791,6 +1788,18 @@ function selectParticipantPill(participantName) {
     
     // Show participant team
     showSelectedParticipantTeam(participantName);
+    
+    // Also populate the matrix table for mobile
+    if (window.innerWidth <= 768) {
+        // Clear previous selection
+        const matrixTable = document.getElementById('matrixTable');
+        if (matrixTable) {
+            matrixTable.innerHTML = '';
+        }
+        
+        // Show participant's team in matrix table
+        showParticipantDetail(participantName);
+    }
     
     console.log(`📱 Selected participant ${participantName}`);
 }

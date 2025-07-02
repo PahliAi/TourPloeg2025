@@ -1191,7 +1191,40 @@ function updateStageIndicators() {
 // Initialize gestures when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
     initMobileGestures();
+    initBottomNavSwipe();
 });
+
+// Initialize bottom navigation swipe
+function initBottomNavSwipe() {
+    if (window.innerWidth > 768) return;
+    
+    const navContainer = document.getElementById('navContainer');
+    if (!navContainer) return;
+    
+    let startX = 0;
+    let scrollLeft = 0;
+    let isScrolling = false;
+    
+    navContainer.addEventListener('touchstart', (e) => {
+        startX = e.touches[0].pageX - navContainer.offsetLeft;
+        scrollLeft = navContainer.scrollLeft;
+        isScrolling = true;
+    });
+    
+    navContainer.addEventListener('touchmove', (e) => {
+        if (!isScrolling) return;
+        e.preventDefault();
+        const x = e.touches[0].pageX - navContainer.offsetLeft;
+        const walk = (x - startX) * 2;
+        navContainer.scrollLeft = scrollLeft - walk;
+    });
+    
+    navContainer.addEventListener('touchend', () => {
+        isScrolling = false;
+    });
+    
+    console.log('📱 Bottom navigation swipe initialized');
+}
 
 async function returnToCurrentYear() {
     console.log('🔙 Returning to current year...');
