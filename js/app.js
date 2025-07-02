@@ -1150,7 +1150,11 @@ function triggerRefresh() {
 
 // Stage navigation functions
 function navigateStageNext() {
-    if (currentStageNum < maxStageNum) {
+    const maxAvailableStage = Math.min(currentStage, 21);
+    const hasEindstand = window.hasEindstandData || currentStage >= 22;
+    const maxStage = hasEindstand ? 22 : maxAvailableStage;
+    
+    if (currentStageNum < maxStage) {
         currentStageNum++;
         showSelectedStage(currentStageNum.toString());
         updateStageIndicators();
@@ -1199,31 +1203,22 @@ function initBottomNavSwipe() {
     if (window.innerWidth > 768) return;
     
     const navContainer = document.getElementById('navContainer');
-    if (!navContainer) return;
+    const bottomNav = document.getElementById('mobileBottomNav');
     
-    let startX = 0;
-    let scrollLeft = 0;
-    let isScrolling = false;
+    if (!navContainer || !bottomNav) return;
     
-    navContainer.addEventListener('touchstart', (e) => {
-        startX = e.touches[0].pageX - navContainer.offsetLeft;
-        scrollLeft = navContainer.scrollLeft;
-        isScrolling = true;
+    // Enable smooth scrolling
+    bottomNav.style.scrollBehavior = 'smooth';
+    
+    // Add scroll snap for better UX
+    navContainer.style.scrollSnapType = 'x mandatory';
+    
+    // Make each tab a snap point
+    document.querySelectorAll('.mobile-tab').forEach(tab => {
+        tab.style.scrollSnapAlign = 'start';
     });
     
-    navContainer.addEventListener('touchmove', (e) => {
-        if (!isScrolling) return;
-        e.preventDefault();
-        const x = e.touches[0].pageX - navContainer.offsetLeft;
-        const walk = (x - startX) * 2;
-        navContainer.scrollLeft = scrollLeft - walk;
-    });
-    
-    navContainer.addEventListener('touchend', () => {
-        isScrolling = false;
-    });
-    
-    console.log('📱 Bottom navigation swipe initialized');
+    console.log('📱 Bottom navigation swipe initialized with native scroll');
 }
 
 async function returnToCurrentYear() {

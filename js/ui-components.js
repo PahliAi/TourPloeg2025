@@ -725,18 +725,23 @@ function calculateBiggestImprovement() {
 // Participant selector functions
 function updateParticipantSelector() {
     const selector = document.getElementById('participantSelector');
-    if (!selector) return;
+    if (selector) {
+        // Clear existing options except the first one
+        selector.innerHTML = '<option value="">Selecteer een deelnemer...</option>';
+        
+        // Add participants to dropdown
+        participants.forEach(participant => {
+            const option = document.createElement('option');
+            option.value = participant.name;
+            option.textContent = participant.name;
+            selector.appendChild(option);
+        });
+    }
     
-    // Clear existing options except the first one
-    selector.innerHTML = '<option value="">Selecteer een deelnemer...</option>';
-    
-    // Add participants to dropdown
-    participants.forEach(participant => {
-        const option = document.createElement('option');
-        option.value = participant.name;
-        option.textContent = participant.name;
-        selector.appendChild(option);
-    });
+    // Also initialize mobile participant pills
+    if (window.innerWidth <= 768) {
+        initParticipantPills();
+    }
 }
 
 function showSelectedParticipantTeam(participantName) {
@@ -1041,14 +1046,28 @@ function showSelectedStage(stageValue) {
     const stageNum = parseInt(stageValue);
     console.log(`🗓️ Showing stage ${stageNum} details`);
     
+    // Check if stage has data available
+    const maxAvailableStage = Math.min(currentStage, 21);
+    const hasEindstand = window.hasEindstandData || currentStage >= 22;
+    const stageHasData = stageNum <= maxAvailableStage || (stageNum === 22 && hasEindstand);
+    
     // Show stage info
     displayStageInfo(stageNum);
     
-    // Show stage podiums (three podiums like homepage)
-    displayStagePodiums(stageNum);
-    
-    // Show stage results tables
-    displayStageResults(stageNum);
+    if (stageHasData) {
+        // Show stage podiums (three podiums like homepage)
+        displayStagePodiums(stageNum);
+        
+        // Show stage results tables
+        displayStageResults(stageNum);
+    } else {
+        // Hide podiums and results for incomplete stages
+        document.getElementById('selectedStagePodiums').style.display = 'none';
+        document.getElementById('stageResultsContainer').style.display = 'none';
+        
+        // Show a message instead
+        showIncompleteStageMessage(stageNum);
+    }
     
     // Reset the dropdown to default after a delay
     setTimeout(() => {
@@ -1056,6 +1075,29 @@ function showSelectedStage(stageValue) {
         selector.value = '';
         selector.style.display = 'block';
     }, 3000);
+}
+
+// Show message for incomplete stages
+function showIncompleteStageMessage(stageNum) {
+    const podiumsContainer = document.getElementById('selectedStagePodiums');
+    const resultsContainer = document.getElementById('stageResultsContainer');
+    
+    if (podiumsContainer) {
+        podiumsContainer.innerHTML = `
+            <div class="incomplete-stage-message">
+                <div class="card" style="text-align: center; padding: 40px; margin: 20px 0;">
+                    <h3>🚧 Etappe ${stageNum}</h3>
+                    <p style="color: #666; margin: 15px 0;">Deze etappe is nog niet gereden.</p>
+                    <p style="color: #999; font-size: 0.9em;">Resultaten en podiums worden beschikbaar na afloop van de etappe.</p>
+                </div>
+            </div>
+        `;
+        podiumsContainer.style.display = 'block';
+    }
+    
+    if (resultsContainer) {
+        resultsContainer.style.display = 'none';
+    }
 }
 
 function displayStageInfo(stageNum) {
@@ -1789,19 +1831,46 @@ function selectParticipantPill(participantName) {
     // Show participant team
     showSelectedParticipantTeam(participantName);
     
-    // Also populate the matrix table for mobile
+    // For mobile, also show inline team data
     if (window.innerWidth <= 768) {
-        // Clear previous selection
-        const matrixTable = document.getElementById('matrixTable');
-        if (matrixTable) {
-            matrixTable.innerHTML = '';
-        }
-        
-        // Show participant's team in matrix table
-        showParticipantDetail(participantName);
+        showMobileParticipantTeam(participantName);
     }
     
     console.log(`📱 Selected participant ${participantName}`);
+}
+
+// Show participant team inline for mobile
+function showMobileParticipantTeam(participantName) {
+    const participant = participants.find(p => p.name === participantName);
+    if (!participant) return;
+    
+    const matrixContainer = document.querySelector('.matrix-container');
+    if (!matrixContainer) return;
+    
+    // Clear existing content
+    matrixContainer.innerHTML = '';
+    
+    // Create mobile team display
+    const teamDisplay = document.createElement('div');
+    teamDisplay.className = 'mobile-team-display';
+    teamDisplay.innerHTML = `
+        <h3>${participant.name}'s Equipe</h3>
+        <div class="mobile-team-grid">
+            ${participant.team.map((rider, index) => `
+                <div class="mobile-team-rider">
+                    <span class="rider-name">${rider.name}</span>
+                    <span class="rider-points">${rider.totalPoints} pts</span>
+                    <span class="rider-status ${rider.status === 'dropped' ? 'dropped' : 'active'}">
+                        ${rider.status === 'dropped' ? '🔴' : '🟢'}
+                    </span>
+                </div>
+            `).join('')}
+        </div>
+    `;
+    
+    matrixContainer.appendChild(teamDisplay);
+    
+    console.log(`📱 Showing team for ${participantName}`);
 }
 
 // Update stage navigation buttons
@@ -1809,12 +1878,16 @@ function updateStageNavigationButtons() {
     const prevBtn = document.getElementById('prevStageBtn');
     const nextBtn = document.getElementById('nextStageBtn');
     
+    const maxAvailableStage = Math.min(currentStage, 21);
+    const hasEindstand = window.hasEindstandData || currentStage >= 22;
+    const maxStage = hasEindstand ? 22 : maxAvailableStage;
+    
     if (prevBtn) {
         prevBtn.disabled = currentStageNum <= 1;
     }
     
     if (nextBtn) {
-        nextBtn.disabled = currentStageNum >= 22;
+        nextBtn.disabled = currentStageNum >= maxStage;
     }
 }
 
@@ -1827,13 +1900,7 @@ populateEtapeSelector = function() {
     }
 };
 
-const originalPopulateParticipantSelector = populateParticipantSelector;
-populateParticipantSelector = function() {
-    originalPopulateParticipantSelector();
-    if (window.innerWidth <= 768) {
-        initParticipantPills();
-    }
-};
+// populateParticipantSelector doesn't exist, using updateParticipantSelector instead
 
 // Initialize pills when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
