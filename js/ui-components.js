@@ -288,19 +288,21 @@ function loadDailyPrizesTable() {
     const generalLeaders = [];
     
     for (let stage = 0; stage < currentStage; stage++) {
-        // Calculate daily winner
+        // Calculate daily winners (all tied winners)
         let maxPoints = 0;
-        let winner = null;
+        let winners = [];
         
         participants.forEach(participant => {
             const stagePoints = participant.stagePoints[stage] || 0;
             if (stagePoints > maxPoints) {
                 maxPoints = stagePoints;
-                winner = participant.name;
+                winners = [participant.name];
+            } else if (stagePoints === maxPoints && stagePoints > 0) {
+                winners.push(participant.name);
             }
         });
         
-        dailyWinners[stage] = winner;
+        dailyWinners[stage] = winners;
         
         // Calculate general classification leader up to this stage
         let leaderPoints = 0;
@@ -328,7 +330,7 @@ function loadDailyPrizesTable() {
         for (let i = 0; i < currentStage; i++) {
             if (i < 21) { // Alleen etappes 1-21
                 const points = participant.stagePoints[i] || 0;
-                const isWinner = dailyWinners[i] === participant.name && points > 0;
+                const isWinner = dailyWinners[i] && dailyWinners[i].includes(participant.name) && points > 0;
                 const isLeader = generalLeaders[i] === participant.name && points > 0;
                 
                 if (isWinner) blueJerseys++;
@@ -376,15 +378,29 @@ function loadDailyPrizesTable() {
         tbody.appendChild(row);
     });
     
-    // Apply auto-sizing after daily prizes table is populated - multiple attempts for reliability
-    [50, 150, 300].forEach(delay => {
-        setTimeout(() => {
-            const table = document.querySelector('#dailyPrizesTable')?.closest('table');
-            if (table && table.offsetHeight > 0) {
-                autoSizeTable(table, { nameColumns: [0, 1], statusColumns: [] }); // Rang(0) + Deelnemer(1) both sticky
-            }
-        }, delay);
-    });
+    // Skip auto-sizing for daily prizes table to prevent card expansion - use simple scroll approach
+    setTimeout(() => {
+        const table = document.querySelector('#dailyPrizesTable')?.closest('table');
+        const tableContainer = table?.closest('.table-container');
+        const card = table?.closest('.card');
+        
+        if (table && tableContainer && card) {
+            // Force the card to stay within normal width
+            card.style.setProperty('width', 'auto', 'important');
+            card.style.setProperty('max-width', '100%', 'important');
+            card.classList.remove('auto-sized-card'); // Remove any auto-sizing class
+            
+            // Enable horizontal scrolling in the table container
+            tableContainer.style.setProperty('overflow-x', 'auto', 'important');
+            tableContainer.style.setProperty('width', '100%', 'important');
+            
+            // Let table size naturally but ensure it can scroll
+            table.style.setProperty('width', 'max-content', 'important');
+            table.style.setProperty('min-width', '100%', 'important');
+            
+            console.log('🔧 Daily prizes table: disabled auto-sizing, enabled horizontal scroll');
+        }
+    }, 200);
 }
 
 // Podium functions
@@ -973,10 +989,9 @@ function autoSizeAllTables() {
             }
         });
         
-        // Find all table containers and their tables
+        // Find all table containers and their tables (excluding dailyPrizesTable to prevent card expansion)
         const tableConfigs = [
             { selector: '#ridersTable', parentTable: true, config: { nameColumns: [0, 1], statusColumns: 'auto' } },
-            { selector: '#dailyPrizesTable', parentTable: true, config: { nameColumns: [0, 1], statusColumns: [] } },
             { selector: '#matrixTable', parentTable: true, config: { nameColumns: [0], statusColumns: [1] } },
             { selector: '#rankingTable', parentTable: true, config: { nameColumns: [0], pointColumns: [] } }
         ];
@@ -1605,19 +1620,21 @@ function loadMobileParticipantCards() {
     const generalLeaders = [];
     
     for (let stage = 0; stage < currentStage; stage++) {
-        // Calculate daily winner
+        // Calculate daily winners (all tied winners)
         let maxPoints = 0;
-        let winner = null;
+        let winners = [];
         
         participants.forEach(participant => {
             const stagePoints = participant.stagePoints[stage] || 0;
             if (stagePoints > maxPoints) {
                 maxPoints = stagePoints;
-                winner = participant.name;
+                winners = [participant.name];
+            } else if (stagePoints === maxPoints && stagePoints > 0) {
+                winners.push(participant.name);
             }
         });
         
-        dailyWinners[stage] = winner;
+        dailyWinners[stage] = winners;
         
         // Calculate general classification leader up to this stage
         let leaderPoints = 0;
@@ -1640,7 +1657,7 @@ function loadMobileParticipantCards() {
         let yellowJerseys = 0;
         
         for (let stage = 0; stage < currentStage; stage++) {
-            if (dailyWinners[stage] === participant.name) blueJerseys++;
+            if (dailyWinners[stage] && dailyWinners[stage].includes(participant.name)) blueJerseys++;
             if (generalLeaders[stage] === participant.name) yellowJerseys++;
         }
         

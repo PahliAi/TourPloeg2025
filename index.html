@@ -52,6 +52,7 @@
             <button class="nav-tab" onclick="showTab('ranking')">📈 Ranking</button>
             <button class="nav-tab" onclick="showTab('riders')">🚴 Pedaleurs</button>
             <button class="nav-tab" onclick="showTab('etapes')">🗓️ Etapes</button>
+            <button class="nav-tab" onclick="showTab('mytdf')">👤 My TdF</button>
             <button class="nav-tab" onclick="showTab('historie')">📚 Histoire</button>
             <button class="nav-tab" onclick="showTab('upload')">📊 Upload</button>
         </div>
@@ -465,6 +466,68 @@
             </div>
         </div>
 
+        <!-- MY TDF TAB -->
+        <div id="mytdf" class="tab-content">
+            <div class="card" style="margin-bottom: 1cm; border: 1px solid #ddd; width: 100%; max-width: none;">
+                <h2>👤 Mijn Equipe Details</h2>
+                <div style="text-align: center; margin: 20px 0;">
+                    <select id="myTdfTeamSelector" onchange="selectMyTdfTeam(this.value)" style="padding: 10px 15px; border-radius: 15px; border: 2px solid #ddd; font-size: 0.9em; font-weight: bold; min-width: 200px; background: white;">
+                        <option value="">Kies je equipe...</option>
+                    </select>
+                </div>
+                <div class="table-container">
+                    <div class="table-scroll">
+                        <table>
+                            <thead id="myTdfTeamDetailHeader">
+                                <tr><th colspan="5" style="text-align: center; color: #666;">Selecteer eerst je equipe</th></tr>
+                            </thead>
+                            <tbody id="myTdfTeamDetailTable">
+                                <tr><td colspan="5" style="text-align: center; padding: 40px; color: #666;">👆 Kies je equipe uit de dropdown</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div style="height: 1cm;"></div>
+
+            <div class="card" style="margin-bottom: 1cm; border: 1px solid #ddd; width: 100%; max-width: none;">
+                <h2>📊 Selectie Matrix</h2>
+                <p style="margin-bottom: 15px; color: #666; font-size: 0.9em;">Zie welke andere deelnemers dezelfde renners hebben gekozen</p>
+                <div class="table-container">
+                    <div class="table-scroll">
+                        <table>
+                            <thead id="myTdfSelectionMatrixHeader">
+                                <tr><th colspan="3" style="text-align: center; color: #666;">Selecteer eerst je equipe</th></tr>
+                            </thead>
+                            <tbody id="myTdfSelectionMatrixTable">
+                                <tr><td colspan="3" style="text-align: center; padding: 40px; color: #666;">👆 Kies je equipe uit de dropdown</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div style="height: 1cm;"></div>
+
+            <div class="card" style="margin-bottom: 1cm; border: 1px solid #ddd; width: 100%; max-width: none;">
+                <h2>🏆 Extended Progress</h2>
+                <p style="margin-bottom: 15px; color: #666; font-size: 0.9em;">Jouw prestaties per etappe met ranking deltas en jersey tracking</p>
+                <div class="table-container">
+                    <div class="table-scroll">
+                        <table>
+                            <thead id="myTdfExtendedProgressHeader">
+                                <tr><th colspan="5" style="text-align: center; color: #666;">Selecteer eerst je equipe</th></tr>
+                            </thead>
+                            <tbody id="myTdfExtendedProgressTable">
+                                <tr><td colspan="5" style="text-align: center; padding: 40px; color: #666;">👆 Kies je equipe uit de dropdown</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- HISTORIE TAB -->
         <div id="historie" class="tab-content">
             <div class="card">
@@ -560,6 +623,10 @@
                 <span class="tab-icon">📈</span>
                 <span class="tab-label">Ranking</span>
             </button>
+            <button class="mobile-tab secondary" data-tab="mytdf" onclick="showTab('mytdf'); setActiveMobileTab(this)">
+                <span class="tab-icon">👤</span>
+                <span class="tab-label">My TdF</span>
+            </button>
             <button class="mobile-tab secondary" data-tab="historie" onclick="showTab('historie'); setActiveMobileTab(this)">
                 <span class="tab-icon">📚</span>
                 <span class="tab-label">Histoire</span>
@@ -588,6 +655,10 @@
                 <button class="drawer-item" onclick="showTab('ranking'); closeMobileDrawer()">
                     <span class="drawer-icon">📈</span>
                     <span class="drawer-label">Ranking</span>
+                </button>
+                <button class="drawer-item" onclick="showTab('mytdf'); closeMobileDrawer()">
+                    <span class="drawer-icon">👤</span>
+                    <span class="drawer-label">My TdF</span>
                 </button>
                 <button class="drawer-item" onclick="showTab('historie'); closeMobileDrawer()">
                     <span class="drawer-icon">📚</span>

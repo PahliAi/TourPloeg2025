@@ -200,6 +200,9 @@ function showTab(tabName) {
         case 'historie':
             loadHistorieTab();
             break;
+        case 'mytdf':
+            loadMyTdfTab();
+            break;
         case 'upload':
             // Upload tab - no special loading needed
             break;
@@ -1417,4 +1420,401 @@ function hidePodiumOverlay(overlayId) {
     if (overlay) {
         overlay.classList.remove('show');
     }
+}
+
+// ============= MY TDF FUNCTIONALITY =============
+
+// Cookie utility functions for storing/retrieving selected team
+const CookieUtils = {
+    set: function(name, value, days = 30) {
+        const expires = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toUTCString();
+        document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/`;
+    },
+    
+    get: function(name) {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) {
+            return decodeURIComponent(parts.pop().split(';').shift());
+        }
+        return null;
+    },
+    
+    remove: function(name) {
+        document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/`;
+    }
+};
+
+// Load My TdF tab and populate team selector
+function loadMyTdfTab() {
+    const selector = document.getElementById('myTdfTeamSelector');
+    if (!selector) return;
+    
+    // Clear existing options except the first one
+    selector.innerHTML = '<option value="">Kies je equipe...</option>';
+    
+    // Add participants to dropdown
+    participants.forEach(participant => {
+        const option = document.createElement('option');
+        option.value = participant.name;
+        option.textContent = participant.name;
+        selector.appendChild(option);
+    });
+    
+    // Auto-select saved team
+    const currentYear = window.historieMode ? currentHistorieYear : new Date().getFullYear().toString();
+    const cookieKey = `myTdfSelectedTeam_${currentYear}`;
+    const savedTeam = CookieUtils.get(cookieKey);
+    
+    if (savedTeam && participants.find(p => p.name === savedTeam)) {
+        selector.value = savedTeam;
+        selectMyTdfTeam(savedTeam);
+    }
+}
+
+// Handle team selection
+function selectMyTdfTeam(teamName) {
+    if (!teamName) {
+        // Clear tables when no team selected
+        clearMyTdfTables();
+        return;
+    }
+    
+    // Save selection in year-specific cookie
+    const currentYear = window.historieMode ? currentHistorieYear : new Date().getFullYear().toString();
+    const cookieKey = `myTdfSelectedTeam_${currentYear}`;
+    CookieUtils.set(cookieKey, teamName);
+    
+    // Update all three tables
+    updateMyTdfTeamDetail(teamName);
+    updateMyTdfSelectionMatrix(teamName);
+    updateMyTdfExtendedProgress(teamName);
+}
+
+// Clear all MyTdF tables
+function clearMyTdfTables() {
+    // Clear team detail table
+    const teamDetailHeader = document.getElementById('myTdfTeamDetailHeader');
+    const teamDetailTable = document.getElementById('myTdfTeamDetailTable');
+    if (teamDetailHeader && teamDetailTable) {
+        teamDetailHeader.innerHTML = '<tr><th colspan="5" style="text-align: center; color: #666;">Selecteer eerst je equipe</th></tr>';
+        teamDetailTable.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 40px; color: #666;">👆 Kies je equipe uit de dropdown</td></tr>';
+    }
+    
+    // Clear selection matrix table
+    const matrixHeader = document.getElementById('myTdfSelectionMatrixHeader');
+    const matrixTable = document.getElementById('myTdfSelectionMatrixTable');
+    if (matrixHeader && matrixTable) {
+        matrixHeader.innerHTML = '<tr><th colspan="3" style="text-align: center; color: #666;">Selecteer eerst je equipe</th></tr>';
+        matrixTable.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 40px; color: #666;">👆 Kies je equipe uit de dropdown</td></tr>';
+    }
+    
+    // Clear extended progress table
+    const progressHeader = document.getElementById('myTdfExtendedProgressHeader');
+    const progressTable = document.getElementById('myTdfExtendedProgressTable');
+    if (progressHeader && progressTable) {
+        progressHeader.innerHTML = '<tr><th colspan="5" style="text-align: center; color: #666;">Selecteer eerst je equipe</th></tr>';
+        progressTable.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 40px; color: #666;">👆 Kies je equipe uit de dropdown</td></tr>';
+    }
+}
+
+// Update team detail table (identical to Equipes modal)
+function updateMyTdfTeamDetail(teamName) {
+    const participant = participants.find(p => p.name === teamName);
+    if (!participant) return;
+    
+    const header = document.getElementById('myTdfTeamDetailHeader');
+    const tbody = document.getElementById('myTdfTeamDetailTable');
+    if (!header || !tbody) return;
+    
+    // Create header - same as showParticipantDetail
+    let headerHtml = '<tr><th style="width: auto;">Renner</th>';
+    
+    // Add stage columns
+    for (let i = 1; i <= currentStage; i++) {
+        if (i <= 21) {
+            headerHtml += `<th>Et ${i}</th>`;
+        }
+    }
+    
+    // Add Totaal Etappes column
+    headerHtml += `<th style="background: #e8f4fd;">Totaal Etappes</th>`;
+    
+    // Add Eindstand column if data exists
+    if (window.hasEindstandData) {
+        headerHtml += `<th style="background: #ffe4b5;">Eind</th>`;
+        headerHtml += `<th>Totaal</th>`;
+    }
+    
+    headerHtml += `<th>Status</th></tr>`;
+    header.innerHTML = headerHtml;
+    
+    // Create table body
+    tbody.innerHTML = '';
+    
+    // Sort riders by total points (highest first)
+    const sortedRiders = [...participant.team].sort((a, b) => {
+        const aTotalPoints = a.points.reduce((sum, p) => sum + (p || 0), 0);
+        const bTotalPoints = b.points.reduce((sum, p) => sum + (p || 0), 0);
+        return bTotalPoints - aTotalPoints;
+    });
+    
+    sortedRiders.forEach(rider => {
+        const statusClass = rider.status === 'dropped' ? 'rider-dropped' : '';
+        
+        let stagePointsHtml = '';
+        for (let i = 0; i < currentStage; i++) {
+            if (i < 21) { // Only stages 1-21
+                stagePointsHtml += `<td class="points-cell ${statusClass}">${rider.points[i] || 0}</td>`;
+            }
+        }
+        
+        // Calculate total of regular stages (1-21)
+        const totalEtappes = rider.points.slice(0, 21).reduce((sum, p) => sum + (p || 0), 0);
+        stagePointsHtml += `<td class="points-cell ${statusClass}" style="background: #e8f4fd; font-weight: bold;">${totalEtappes}</td>`;
+        
+        // Add Eindstand column if data exists
+        if (window.hasEindstandData) {
+            const eindstandPoints = rider.points[21] || 0; // Index 21 = stage 22 (Eindstand)
+            stagePointsHtml += `<td class="points-cell ${statusClass}" style="background: #ffe4b5; font-weight: bold;">${eindstandPoints}</td>`;
+            
+            // Total of everything
+            const totalPoints = rider.points.reduce((sum, p) => sum + (p || 0), 0);
+            stagePointsHtml += `<td class="points-cell ${statusClass}"><strong>${totalPoints}</strong></td>`;
+        }
+        
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td class="${statusClass}" style="white-space: nowrap;">${rider.name}</td>
+            ${stagePointsHtml}
+            <td class="${statusClass}">${rider.status === 'dropped' ? '🔴 Uitgevallen' : '🟢 Actief'}</td>
+        `;
+        
+        tbody.appendChild(row);
+    });
+    
+    // Apply auto-sizing after table is populated
+    setTimeout(() => {
+        const table = document.querySelector('#myTdfTeamDetailTable')?.closest('table');
+        if (table && table.offsetHeight > 0) {
+            autoSizeTable(table, { nameColumns: [0], statusColumns: 'auto' });
+        }
+    }, 100);
+}
+
+// Update selection matrix table (identical to Equipes matrix but filtered to selected team)
+function updateMyTdfSelectionMatrix(teamName) {
+    const participant = participants.find(p => p.name === teamName);
+    if (!participant) return;
+    
+    const header = document.getElementById('myTdfSelectionMatrixHeader');
+    const tbody = document.getElementById('myTdfSelectionMatrixTable');
+    if (!header || !tbody) return;
+    
+    // Create full matrix header like in loadMatrixTable
+    let headerHtml = '<tr><th style="writing-mode: initial; text-orientation: initial;">Renner</th><th style="writing-mode: initial; text-orientation: initial;">Status</th><th style="writing-mode: initial; text-orientation: initial;">Totaal</th>';
+    participants.forEach(p => {
+        headerHtml += `<th style="writing-mode: vertical-lr; text-orientation: mixed;" title="${p.name}">${p.name}</th>`;
+    });
+    headerHtml += '</tr>';
+    header.innerHTML = headerHtml;
+    
+    // Clear table
+    tbody.innerHTML = '';
+    
+    // Create rider stats for selected team riders only
+    const riderStats = {};
+    participant.team.forEach(rider => {
+        riderStats[rider.name] = {
+            name: rider.name,
+            status: rider.status,
+            selectedBy: [],
+            totalSelections: 0
+        };
+        
+        // Check all participants for this rider
+        participants.forEach(p => {
+            const hasRider = p.team.some(r => r.name === rider.name);
+            if (hasRider) {
+                riderStats[rider.name].selectedBy.push(p.name);
+                riderStats[rider.name].totalSelections++;
+            }
+        });
+    });
+    
+    // Sort by total selections (most popular first)
+    const sortedRiders = Object.values(riderStats).sort((a, b) => b.totalSelections - a.totalSelections);
+    
+    sortedRiders.forEach(rider => {
+        const statusClass = rider.status === 'dropped' ? 'rider-dropped' : '';
+        
+        let participantCells = '';
+        participants.forEach(p => {
+            const isSelected = rider.selectedBy.includes(p.name);
+            const cellContent = isSelected ? '🟢' : '';
+            participantCells += `<td>${cellContent}</td>`;
+        });
+        
+        // Status icon for matrix
+        const matrixStatusIcon = rider.status === 'dropped' ? '🔴' : '🟢';
+        const matrixRowClass = rider.status === 'dropped' ? 'rider-dropped-row' : '';
+        
+        const row = document.createElement('tr');
+        row.className = matrixRowClass;
+        row.innerHTML = `
+            <td class="${statusClass}">${rider.name}</td>
+            <td class="${statusClass}">${matrixStatusIcon}</td>
+            <td class="points-cell"><strong>${rider.totalSelections}</strong></td>
+            ${participantCells}
+        `;
+        tbody.appendChild(row);
+    });
+    
+    // Apply auto-sizing after matrix table is populated
+    setTimeout(() => {
+        const table = document.querySelector('#myTdfSelectionMatrixTable')?.closest('table');
+        if (table && table.offsetHeight > 0) {
+            autoSizeTable(table, { nameColumns: [0], statusColumns: [1] });
+        }
+    }, 100);
+}
+
+// Update extended progress table
+function updateMyTdfExtendedProgress(teamName) {
+    const participant = participants.find(p => p.name === teamName);
+    if (!participant) return;
+    
+    const header = document.getElementById('myTdfExtendedProgressHeader');
+    const tbody = document.getElementById('myTdfExtendedProgressTable');
+    if (!header || !tbody) return;
+    
+    // Create header
+    let headerHtml = '<tr><th>Etappe</th><th>Punten</th><th>Totaal</th><th>Rank</th><th>Jerseys</th></tr>';
+    header.innerHTML = headerHtml;
+    
+    // Clear table
+    tbody.innerHTML = '';
+    
+    // Calculate daily winners for jersey tracking (fixed blue jersey logic)
+    const dailyWinners = [];
+    for (let stage = 0; stage < currentStage; stage++) {
+        let maxPoints = 0;
+        let winners = [];
+        
+        participants.forEach(p => {
+            const stagePoints = p.stagePoints[stage] || 0;
+            if (stagePoints > maxPoints) {
+                maxPoints = stagePoints;
+                winners = [p.name];
+            } else if (stagePoints === maxPoints && stagePoints > 0) {
+                winners.push(p.name);
+            }
+        });
+        
+        dailyWinners[stage] = winners;
+    }
+    
+    // Calculate general classification leaders for each stage
+    const generalLeaders = [];
+    for (let stage = 0; stage < currentStage; stage++) {
+        // Calculate cumulative points up to this stage for all participants
+        const stageRankings = participants.map(p => ({
+            name: p.name,
+            totalPoints: p.stagePoints.slice(0, stage + 1).reduce((sum, points) => sum + (points || 0), 0)
+        }));
+        
+        // Sort by total points to get leader
+        stageRankings.sort((a, b) => b.totalPoints - a.totalPoints);
+        
+        // Get all tied leaders
+        const maxPoints = stageRankings[0].totalPoints;
+        const leaders = stageRankings.filter(p => p.totalPoints === maxPoints).map(p => p.name);
+        
+        generalLeaders[stage] = leaders;
+    }
+    
+    // Create rows for each stage
+    for (let stage = 0; stage < currentStage; stage++) {
+        const stagePoints = participant.stagePoints[stage] || 0;
+        const cumulativePoints = participant.stagePoints.slice(0, stage + 1).reduce((sum, p) => sum + (p || 0), 0);
+        
+        // Calculate ranking after this stage
+        const stageRankings = participants.map(p => ({
+            name: p.name,
+            totalPoints: p.stagePoints.slice(0, stage + 1).reduce((sum, points) => sum + (points || 0), 0)
+        }));
+        stageRankings.sort((a, b) => b.totalPoints - a.totalPoints);
+        const currentRank = stageRankings.findIndex(p => p.name === teamName) + 1;
+        
+        // Calculate ranking delta
+        let rankDelta = '';
+        if (stage > 0) {
+            const prevStageRankings = participants.map(p => ({
+                name: p.name,
+                totalPoints: p.stagePoints.slice(0, stage).reduce((sum, points) => sum + (points || 0), 0)
+            }));
+            prevStageRankings.sort((a, b) => b.totalPoints - a.totalPoints);
+            const prevRank = prevStageRankings.findIndex(p => p.name === teamName) + 1;
+            
+            const change = prevRank - currentRank;
+            if (change > 0) {
+                rankDelta = ` (<span style="color: #28a745;">+${change}</span>)`;
+            } else if (change < 0) {
+                rankDelta = ` (<span style="color: #dc3545;">${change}</span>)`;
+            } else {
+                rankDelta = ` (<span style="color: #6c757d;">0</span>)`;
+            }
+        }
+        
+        // Check for jerseys
+        let jerseys = '';
+        if (dailyWinners[stage] && dailyWinners[stage].includes(teamName)) {
+            jerseys += '🔵 ';
+        }
+        if (generalLeaders[stage] && generalLeaders[stage].includes(teamName)) {
+            jerseys += '🟡 ';
+        }
+        if (!jerseys) {
+            jerseys = '-';
+        }
+        
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td><strong>${stage + 1}</strong></td>
+            <td class="points-cell">${stagePoints}</td>
+            <td class="points-cell"><strong>${cumulativePoints}</strong></td>
+            <td class="points-cell">${currentRank}${rankDelta}</td>
+            <td>${jerseys}</td>
+        `;
+        
+        tbody.appendChild(row);
+    }
+    
+    // Add final classification row if available
+    if (window.hasEindstandData) {
+        const eindstandPoints = participant.stagePoints[21] || 0;
+        const finalTotal = participant.totalPoints;
+        const finalRank = participants.findIndex(p => p.name === teamName) + 1;
+        
+        const row = document.createElement('tr');
+        row.style.background = '#ffe4b5';
+        row.style.fontWeight = 'bold';
+        row.innerHTML = `
+            <td><strong>Eind</strong></td>
+            <td class="points-cell">${eindstandPoints}</td>
+            <td class="points-cell"><strong>${finalTotal}</strong></td>
+            <td class="points-cell">${finalRank}</td>
+            <td>🏆</td>
+        `;
+        
+        tbody.appendChild(row);
+    }
+    
+    // Apply auto-sizing after extended progress table is populated
+    setTimeout(() => {
+        const table = document.querySelector('#myTdfExtendedProgressTable')?.closest('table');
+        if (table && table.offsetHeight > 0) {
+            autoSizeTable(table, { nameColumns: [0], statusColumns: [] });
+        }
+    }, 100);
 }
