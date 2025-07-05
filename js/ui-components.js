@@ -304,19 +304,21 @@ function loadDailyPrizesTable() {
         
         dailyWinners[stage] = winners;
         
-        // Calculate general classification leader up to this stage
-        let leaderPoints = 0;
-        let leader = null;
+        // Calculate general classification leaders (all tied leaders)
+        let maxLeaderPoints = 0;
+        let leaders = [];
         
         participants.forEach(participant => {
             const totalUpToStage = participant.stagePoints.slice(0, stage + 1).reduce((sum, p) => sum + p, 0);
-            if (totalUpToStage > leaderPoints) {
-                leaderPoints = totalUpToStage;
-                leader = participant.name;
+            if (totalUpToStage > maxLeaderPoints) {
+                maxLeaderPoints = totalUpToStage;
+                leaders = [participant.name];
+            } else if (totalUpToStage === maxLeaderPoints && totalUpToStage > 0) {
+                leaders.push(participant.name);
             }
         });
         
-        generalLeaders[stage] = leader;
+        generalLeaders[stage] = leaders;
     }
     
     participants.forEach((participant, index) => {
@@ -331,7 +333,7 @@ function loadDailyPrizesTable() {
             if (i < 21) { // Alleen etappes 1-21
                 const points = participant.stagePoints[i] || 0;
                 const isWinner = dailyWinners[i] && dailyWinners[i].includes(participant.name) && points > 0;
-                const isLeader = generalLeaders[i] === participant.name && points > 0;
+                const isLeader = generalLeaders[i] && generalLeaders[i].includes(participant.name) && points > 0;
                 
                 if (isWinner) blueJerseys++;
                 if (isLeader) yellowJerseys++;
@@ -1636,19 +1638,21 @@ function loadMobileParticipantCards() {
         
         dailyWinners[stage] = winners;
         
-        // Calculate general classification leader up to this stage
-        let leaderPoints = 0;
-        let leader = null;
+        // Calculate general classification leaders (all tied leaders)
+        let maxLeaderPoints = 0;
+        let leaders = [];
         
         participants.forEach(participant => {
             const totalUpToStage = participant.stagePoints.slice(0, stage + 1).reduce((sum, p) => sum + p, 0);
-            if (totalUpToStage > leaderPoints) {
-                leaderPoints = totalUpToStage;
-                leader = participant.name;
+            if (totalUpToStage > maxLeaderPoints) {
+                maxLeaderPoints = totalUpToStage;
+                leaders = [participant.name];
+            } else if (totalUpToStage === maxLeaderPoints && totalUpToStage > 0) {
+                leaders.push(participant.name);
             }
         });
         
-        generalLeaders[stage] = leader;
+        generalLeaders[stage] = leaders;
     }
     
     sortedParticipants.forEach((participant, index) => {
@@ -1658,7 +1662,7 @@ function loadMobileParticipantCards() {
         
         for (let stage = 0; stage < currentStage; stage++) {
             if (dailyWinners[stage] && dailyWinners[stage].includes(participant.name)) blueJerseys++;
-            if (generalLeaders[stage] === participant.name) yellowJerseys++;
+            if (generalLeaders[stage] && generalLeaders[stage].includes(participant.name)) yellowJerseys++;
         }
         
         const position = index + 1;
