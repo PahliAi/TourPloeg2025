@@ -988,33 +988,6 @@ function closeMobileDrawer() {
     document.body.style.overflow = '';
 }
 
-// Floating Action Button functions
-function toggleFabMenu() {
-    const mainFab = document.getElementById('mainFab');
-    const fabMenu = document.getElementById('fabMenu');
-    
-    mainFab.classList.toggle('active');
-    fabMenu.classList.toggle('active');
-}
-
-function closeFabMenu() {
-    const mainFab = document.getElementById('mainFab');
-    const fabMenu = document.getElementById('fabMenu');
-    
-    mainFab.classList.remove('active');
-    fabMenu.classList.remove('active');
-}
-
-function downloadExample() {
-    const link = document.createElement('a');
-    link.href = 'tdf-current.xlsx';
-    link.download = 'TourDeFrance_Voorbeeld.xlsx';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    console.log('📥 Example file download triggered');
-}
 
 // ============= MOBILE GESTURES & INTERACTIONS =============
 
@@ -1392,16 +1365,35 @@ function getCurrentWinners() {
         (b.stagePoints[lastStageIndex] || 0) - (a.stagePoints[lastStageIndex] || 0)
     );
     
+    // Check for daily ties
+    const dailyMaxPoints = dailyRanking[0]?.stagePoints[lastStageIndex] || 0;
+    const dailyTiedWinners = dailyRanking.filter(p => (p.stagePoints[lastStageIndex] || 0) === dailyMaxPoints && dailyMaxPoints > 0);
+    
     // General classification leader
     const generalRanking = [...participants].sort((a, b) => b.totalPoints - a.totalPoints);
+    
+    // Check for general ties
+    const generalMaxPoints = generalRanking[0]?.totalPoints || 0;
+    const generalTiedLeaders = generalRanking.filter(p => p.totalPoints === generalMaxPoints && generalMaxPoints > 0);
     
     // Most daily wins leader
     const dailyWinsRanking = [...participants].sort((a, b) => b.dailyWins - a.dailyWins);
     
+    // Check for daily wins ties
+    const maxDailyWins = dailyWinsRanking[0]?.dailyWins || 0;
+    const dailyWinsTiedLeaders = dailyWinsRanking.filter(p => p.dailyWins === maxDailyWins && maxDailyWins > 0);
+    
+    // Store tie information globally for modal access
+    window.currentTies = {
+        daily: dailyTiedWinners,
+        general: generalTiedLeaders,
+        dailyWins: dailyWinsTiedLeaders
+    };
+    
     return {
-        daily: dailyRanking[0]?.name || 'Geen winnaar',
-        general: generalRanking[0]?.name || 'Geen winnaar', 
-        dailyWins: dailyWinsRanking[0]?.name || 'Geen winnaar'
+        daily: dailyTiedWinners.length > 1 ? 'Klik voor alle winnaars' : (dailyTiedWinners[0]?.name || 'Geen winnaar'),
+        general: generalTiedLeaders.length > 1 ? 'Klik voor alle winnaars' : (generalTiedLeaders[0]?.name || 'Geen winnaar'), 
+        dailyWins: dailyWinsTiedLeaders.length > 1 ? 'Klik voor alle winnaars' : (dailyWinsTiedLeaders[0]?.name || 'Geen winnaar')
     };
 }
 
@@ -1411,6 +1403,29 @@ function showPodiumOverlay(overlayId, nameId, winnerName) {
     
     if (overlay && nameElement) {
         nameElement.textContent = winnerName;
+        
+        // Make clickable if multiple winners
+        if (winnerName === 'Klik voor alle winnaars') {
+            overlay.style.cursor = 'pointer';
+            nameElement.style.cursor = 'pointer';
+            
+            // Add click handler based on overlay type
+            overlay.onclick = function() {
+                if (overlayId === 'dailyOverlay' && window.currentTies?.daily?.length > 1) {
+                    showJerseyWinnersModal(window.currentTies.daily, 'blauw-nb.png', '🔵 Blauwe Trui Winnaars', `Etappe ${currentStage}`, 'dagwinnaar');
+                } else if (overlayId === 'generalOverlay' && window.currentTies?.general?.length > 1) {
+                    showJerseyWinnersModal(window.currentTies.general, 'geel-nb.png', '🟡 Gele Trui Dragers', `na Etappe ${currentStage}`, 'klassementsleider');
+                } else if (overlayId === 'dailyWinsOverlay' && window.currentTies?.dailyWins?.length > 1) {
+                    showJerseyWinnersModal(window.currentTies.dailyWins, 'milka-nb.png', '🏆 Meeste Dagoverwinningen', `na Etappe ${currentStage}`, 'dagwinnenkoning');
+                }
+            };
+        } else {
+            // Remove click functionality for single winners
+            overlay.style.cursor = 'default';
+            nameElement.style.cursor = 'default';
+            overlay.onclick = null;
+        }
+        
         overlay.classList.add('show');
     }
 }
@@ -1817,4 +1832,353 @@ function updateMyTdfExtendedProgress(teamName) {
             autoSizeTable(table, { nameColumns: [0], statusColumns: [] });
         }
     }, 100);
+}
+
+// ============= JERSEY WINNERS MODAL =============
+
+// Show all daily winners for current stage
+function showAllDailyWinners() {
+    const lastStageIndex = currentStage - 1;
+    if (lastStageIndex < 0) return;
+    
+    // Get daily winners for the last completed stage
+    const dailyRanking = [...participants].sort((a, b) => 
+        (b.stagePoints[lastStageIndex] || 0) - (a.stagePoints[lastStageIndex] || 0)
+    );
+    
+    // Find all tied winners
+    const maxPoints = dailyRanking[0]?.stagePoints[lastStageIndex] || 0;
+    const winners = dailyRanking.filter(p => (p.stagePoints[lastStageIndex] || 0) === maxPoints && maxPoints > 0);
+    
+    showJerseyWinnersModal(winners, 'blauw-nb.png', '🔵 Blauwe Trui Winnaars', `Etappe ${currentStage}`, 'dagwinnaar');
+}
+
+// Show all general classification leaders for current stage
+function showAllGeneralLeaders() {
+    const lastStageIndex = currentStage - 1;
+    if (lastStageIndex < 0) return;
+    
+    // Calculate cumulative points up to current stage
+    const generalRanking = [...participants].map(p => ({
+        ...p,
+        cumulativePoints: p.stagePoints.slice(0, currentStage).reduce((sum, points) => sum + (points || 0), 0)
+    })).sort((a, b) => b.cumulativePoints - a.cumulativePoints);
+    
+    // Find all tied leaders
+    const maxPoints = generalRanking[0]?.cumulativePoints || 0;
+    const leaders = generalRanking.filter(p => p.cumulativePoints === maxPoints && maxPoints > 0);
+    
+    showJerseyWinnersModal(leaders, 'geel-nb.png', '🟡 Gele Trui Dragers', `na Etappe ${currentStage}`, 'klassementsleider');
+}
+
+// Generic function to show jersey winners modal
+// Global variables for jersey carousel
+let currentJerseyIndex = 0;
+let jerseyWinners = [];
+
+function showJerseyWinnersModal(winners, jerseyImage, title, subtitle, winnerType) {
+    if (!winners || winners.length === 0) return;
+    
+    // Store winners for carousel navigation
+    jerseyWinners = winners;
+    currentJerseyIndex = 0;
+    
+    const modal = document.getElementById('jerseyWinnersModal');
+    const content = document.getElementById('jerseyWinnersContent');
+    
+    // Create carousel-style modal content
+    let modalHtml = `
+        <div style="text-align: center; margin-bottom: 30px;">
+            <h2 style="color: white; text-shadow: 0 4px 15px rgba(0, 0, 0, 0.7);">${title}</h2>
+            <p style="color: rgba(255,255,255,0.8); font-size: 1.1em; text-shadow: 0 2px 10px rgba(0, 0, 0, 0.7);">${subtitle}</p>
+            <p style="color: rgba(255,255,255,0.6); font-size: 0.9em; text-shadow: 0 2px 10px rgba(0, 0, 0, 0.7);">${winners.length} ${winnerType}${winners.length > 1 ? 's' : ''}</p>
+        </div>
+        
+        <div class="jersey-carousel-container">
+            <!-- Navigation buttons (desktop) -->
+            <button class="carousel-nav-btn carousel-prev desktop-nav" onclick="navigateJerseyCarousel(-1)" ${winners.length <= 1 ? 'style="display: none;"' : ''}>
+                <span>‹</span>
+            </button>
+            
+            <!-- Jersey display frame -->
+            <div class="jersey-carousel-frame">
+                <div class="jersey-winner-item podium-overlay-style">
+                    <img src="${jerseyImage}" alt="Jersey" class="podium-image jersey-winner-image">
+                    <div class="podium-winner-name jersey-winner-name">${winners[0].name}</div>
+                </div>
+            </div>
+            
+            <button class="carousel-nav-btn carousel-next desktop-nav" onclick="navigateJerseyCarousel(1)" ${winners.length <= 1 ? 'style="display: none;"' : ''}>
+                <span>›</span>
+            </button>
+            
+            <!-- Mobile navigation row -->
+            <div class="mobile-nav-row" ${winners.length <= 1 ? 'style="display: none;"' : ''}>
+                <button class="carousel-nav-btn carousel-prev mobile-nav" onclick="navigateJerseyCarousel(-1)">
+                    <span>‹</span>
+                </button>
+                <button class="carousel-nav-btn carousel-next mobile-nav" onclick="navigateJerseyCarousel(1)">
+                    <span>›</span>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Position indicator -->
+        <div class="carousel-indicator" ${winners.length <= 1 ? 'style="display: none;"' : ''}>
+            <span style="color: rgba(255,255,255,0.8); font-size: 1.1em; text-shadow: 0 2px 10px rgba(0, 0, 0, 0.7);">
+                1 van ${winners.length}
+            </span>
+        </div>
+    `;
+    
+    // Add CSS for carousel styling
+    modalHtml += `
+        <style>
+        /* Override white background to match 5-second overlay */
+        #jerseyWinnersModal .detail-content {
+            background: rgba(0, 0, 0, 0.9) !important;
+            color: white !important;
+            border: none !important;
+        }
+        
+        #jerseyWinnersModal .close-btn {
+            color: white !important;
+            background: rgba(255, 255, 255, 0.2) !important;
+            border: 2px solid rgba(255, 255, 255, 0.3) !important;
+            backdrop-filter: blur(10px);
+        }
+        
+        #jerseyWinnersModal .close-btn:hover {
+            background: rgba(255, 255, 255, 0.3) !important;
+            border-color: rgba(255, 255, 255, 0.5) !important;
+        }
+        
+        .jersey-carousel-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 30px;
+            background: rgba(0, 0, 0, 0.9);
+            border-radius: 20px;
+            padding: 40px;
+            position: relative;
+        }
+        
+        .jersey-carousel-frame {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 350px;
+            min-height: 400px;
+        }
+        
+        .jersey-winner-item.podium-overlay-style {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            width: 100%;
+            height: 100%;
+            padding: 30px;
+        }
+        
+        .jersey-winner-image.podium-image {
+            max-width: 80%;
+            max-height: 60%;
+            object-fit: contain;
+            filter: drop-shadow(0 10px 30px rgba(255, 255, 255, 0.3));
+            animation: float 3s ease-in-out infinite;
+            margin-bottom: 0;
+        }
+        
+        .jersey-winner-name.podium-winner-name {
+            color: white;
+            font-size: 2.3em;
+            font-weight: bold;
+            text-shadow: 0 4px 15px rgba(0, 0, 0, 0.7);
+            margin-top: 25px;
+            text-align: center;
+            animation: glow 2s ease-in-out infinite alternate;
+            word-wrap: break-word;
+            max-width: 300px;
+        }
+        
+        .carousel-nav-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+        
+        .carousel-nav-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: scale(1.1);
+        }
+        
+        .carousel-nav-btn span {
+            color: white;
+            font-size: 2em;
+            font-weight: bold;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.7);
+            line-height: 1;
+        }
+        
+        .carousel-indicator {
+            text-align: center;
+            margin-top: 20px;
+        }
+        
+        /* Floating animation from 5-second overlay */
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        /* Glow animation from 5-second overlay */
+        @keyframes glow {
+            from { text-shadow: 0 4px 15px rgba(0, 0, 0, 0.7), 0 0 20px rgba(255, 215, 0, 0.3); }
+            to { text-shadow: 0 4px 15px rgba(0, 0, 0, 0.7), 0 0 30px rgba(255, 215, 0, 0.6); }
+        }
+        
+        /* Hide mobile navigation on desktop */
+        @media (min-width: 769px) {
+            .mobile-nav-row {
+                display: none;
+            }
+            .mobile-nav {
+                display: none;
+            }
+        }
+        
+        /* Mobile adjustments */
+        @media (max-width: 768px) {
+            .jersey-carousel-container {
+                flex-direction: column;
+                gap: 20px;
+                padding: 20px 10px;
+                align-items: center;
+            }
+            
+            .jersey-carousel-frame {
+                width: 100%;
+                max-width: 300px;
+                min-height: 350px;
+                order: 1;
+            }
+            
+            /* Hide desktop navigation on mobile */
+            .desktop-nav {
+                display: none !important;
+            }
+            
+            /* Show mobile navigation */
+            .mobile-nav-row {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                gap: 40px;
+                order: 2;
+                width: 100%;
+                margin-top: 20px;
+            }
+            
+            .mobile-nav {
+                width: 70px;
+                height: 70px;
+                flex-shrink: 0;
+                display: flex !important;
+                background: rgba(255, 255, 255, 0.3);
+                border: 3px solid rgba(255, 255, 255, 0.5);
+            }
+            
+            .mobile-nav span {
+                font-size: 2.2em;
+                font-weight: bold;
+            }
+            
+            .jersey-winner-name.podium-winner-name {
+                font-size: 1.8em;
+                max-width: 260px;
+            }
+        }
+        </style>
+    `;
+    
+    content.innerHTML = modalHtml;
+    
+    // Store jersey image for navigation
+    window.currentJerseyImage = jerseyImage;
+    
+    // Show modal with same transition as 5-second overlay
+    modal.style.display = 'flex';
+    modal.style.opacity = '0';
+    modal.style.transform = 'scale(0.8)';
+    modal.style.transition = 'all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)';
+    
+    // Force reflow and apply transition
+    modal.offsetHeight;
+    modal.style.opacity = '1';
+    modal.style.transform = 'scale(1)';
+    
+    // Prevent body scroll on mobile when modal is open
+    document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.width = '100%';
+}
+
+// Navigate through jersey carousel
+function navigateJerseyCarousel(direction) {
+    if (jerseyWinners.length <= 1) return;
+    
+    currentJerseyIndex += direction;
+    
+    // Wrap around
+    if (currentJerseyIndex < 0) {
+        currentJerseyIndex = jerseyWinners.length - 1;
+    } else if (currentJerseyIndex >= jerseyWinners.length) {
+        currentJerseyIndex = 0;
+    }
+    
+    // Update the displayed winner
+    const jerseyImage = document.querySelector('.jersey-winner-image');
+    const jerseyName = document.querySelector('.jersey-winner-name');
+    const indicator = document.querySelector('.carousel-indicator span');
+    
+    if (jerseyImage && jerseyName && indicator) {
+        // Fade out
+        jerseyImage.style.transition = 'opacity 0.2s ease';
+        jerseyName.style.transition = 'opacity 0.2s ease';
+        jerseyImage.style.opacity = '0';
+        jerseyName.style.opacity = '0';
+        
+        setTimeout(() => {
+            // Update content
+            jerseyName.textContent = jerseyWinners[currentJerseyIndex].name;
+            indicator.innerHTML = `${currentJerseyIndex + 1} van ${jerseyWinners.length}`;
+            
+            // Fade in
+            jerseyImage.style.opacity = '1';
+            jerseyName.style.opacity = '1';
+        }, 200);
+    }
+}
+
+// Close jersey winners modal
+function closeJerseyWinnersModal() {
+    const modal = document.getElementById('jerseyWinnersModal');
+    modal.style.display = 'none';
+    
+    // Restore body scroll
+    document.body.style.overflow = '';
+    document.body.style.position = '';
+    document.body.style.width = '';
 }

@@ -80,12 +80,12 @@
                 <div class="card overview-block" id="overviewBlock">
                     <h2 id="overviewTitle">📊 Overzicht - Etappe 1</h2>
                     <div class="overview-content">
-                        <div class="overview-jersey" id="overviewDaily">
+                        <div class="overview-jersey" id="overviewDaily" onclick="showAllDailyWinners()" style="cursor: pointer;" title="Klik om alle dagwinnaars te zien">
                             <div class="winner-stats" id="overviewDailyStats">40 punten</div>
                             <img src="blauw-nb.png" alt="Blauwe Trui">
                             <div class="winner-name" id="overviewDailyWinner">Croque Monsieur</div>
                         </div>
-                        <div class="overview-jersey" id="overviewGeneral">
+                        <div class="overview-jersey" id="overviewGeneral" onclick="showAllGeneralLeaders()" style="cursor: pointer;" title="Klik om alle klassementsleiders te zien">
                             <div class="winner-stats" id="overviewGeneralStats">100 punten totaal</div>
                             <img src="geel-nb.png" alt="Gele Trui">
                             <div class="winner-name" id="overviewGeneralWinner">Orange au-dessus Allez</div>
@@ -672,32 +672,22 @@
         </div>
     </div>
 
-    <!-- Floating Action Button -->
-    <div class="fab-container" id="fabContainer">
-        <button class="fab main-fab" id="mainFab" onclick="toggleFabMenu()">
-            <span class="fab-icon">+</span>
-        </button>
-        <div class="fab-menu" id="fabMenu">
-            <button class="fab secondary-fab" onclick="document.getElementById('excelFile').click(); closeFabMenu();" title="Upload Excel">
-                <span class="fab-icon">📊</span>
-                <span class="fab-label">Upload</span>
-            </button>
-            <button class="fab secondary-fab" onclick="exportData(); closeFabMenu();" title="Export Data">
-                <span class="fab-icon">💾</span>
-                <span class="fab-label">Export</span>
-            </button>
-            <button class="fab secondary-fab" onclick="downloadExample(); closeFabMenu();" title="Download Example">
-                <span class="fab-icon">📥</span>
-                <span class="fab-label">Voorbeeld</span>
-            </button>
-        </div>
-    </div>
 
     <!-- Detail View Modal -->
     <div id="detailView" class="detail-view">
         <div class="detail-content">
             <button class="close-btn" onclick="closeDetailView()">&times;</button>
             <div id="detailContent">
+                <!-- Filled by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Jersey Winners Modal -->
+    <div id="jerseyWinnersModal" class="detail-view" style="display: none;">
+        <div class="detail-content">
+            <button class="close-btn" onclick="closeJerseyWinnersModal()">&times;</button>
+            <div id="jerseyWinnersContent">
                 <!-- Filled by JavaScript -->
             </div>
         </div>
