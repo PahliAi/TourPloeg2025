@@ -200,6 +200,24 @@ function loadRankingTable() {
     const rankingProgression = getRankingChanges();
     tbody.innerHTML = '';
     
+    // Count risers, droppers, and same-position participants from latest stage data
+    let risers = 0, droppers = 0, same = 0;
+    if (rankingProgression.length > 0 && currentStage > 1) {
+        rankingProgression.forEach(participant => {
+            const latestStage = participant.stages[participant.stages.length - 1];
+            if (latestStage.positionChange < 0) {
+                risers++; // Negative change = moved up (better position)
+            } else if (latestStage.positionChange > 0) {
+                droppers++; // Positive change = moved down (worse position)
+            } else {
+                same++; // No change
+            }
+        });
+    }
+    
+    // Update dynamic legend
+    updateRankingLegenda(risers, droppers, same);
+    
     // Update table header dynamically based on current stage
     const thead = document.getElementById('rankingTableHeader');
     let headerHtml = `
@@ -977,6 +995,30 @@ function autoSizeTable(tableElement, options = {}) {
             card.classList.add('auto-sized-card');
         }
     }, 100); // Slightly longer delay to ensure table is fully rendered
+}
+
+// Update ranking legend with dynamic counts
+function updateRankingLegenda(risers, droppers, same) {
+    const legendaElement = document.getElementById('rankingLegenda');
+    if (!legendaElement) return;
+    
+    if (currentStage <= 1) {
+        // For stage 1, show the default explanation
+        legendaElement.innerHTML = `
+            <strong>Legenda:</strong> Eerste etappe toont positie, daarna positieverandering: 
+            <span style="color: #28a745; font-weight: bold;">-4 Gestegen</span>, 
+            <span style="color: #dc3545; font-weight: bold;">+7 Gedaald</span>, 
+            <span style="color: #6c757d; font-weight: bold;">0 Gelijk</span>
+        `;
+    } else {
+        // For stage 2+, show dynamic counts
+        legendaElement.innerHTML = `
+            <strong>Legenda:</strong> Etappe ${currentStage} positieveranderingen: 
+            <span style="color: #28a745; font-weight: bold;">${risers} Gestegen</span>, 
+            <span style="color: #dc3545; font-weight: bold;">${droppers} Gedaald</span>, 
+            <span style="color: #6c757d; font-weight: bold;">${same} Gelijk</span>
+        `;
+    }
 }
 
 // Apply auto-sizing to all tables after they're loaded
