@@ -646,7 +646,7 @@ function processExcelData(rennersData, deelnemersData, uitlagenData, etappePunte
         }
     });
     
-    alert(`✅ Excel bestand succesvol geladen!\n${participants.length} deelnemers\n${availableRiders.length} renners\nCurrentStage: ${currentStage}\nCheck console voor details`);
+    alert(`✅ Excel bestand succesvol geladen!\n${participants.length} deelnemers\n${availableRiders.length} renners\nCurrentStage: ${currentStage}`);
 }
 
 function processEtappeUitslagen(uitlagenData, etappePunten, eindklassementPunten) {

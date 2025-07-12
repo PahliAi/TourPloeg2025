@@ -17,32 +17,22 @@ function loadRidersTable() {
     
     tbody.innerHTML = '';
     
-    // Get race positions from Excel data for proper ordering
-    const ridersWithPositions = allRiders.map(rider => {
-        let racePosition = null;
-        
-        // Get position from final classification if available
+    // Calculate tied rankings for riders based on points
+    const riderScoreFunction = (rider) => {
+        // If final classification data exists and rider has actual race position, use that for sorting
         if (window.hasEindstandData && window.racePositions && window.racePositions[rider.name]) {
-            racePosition = window.racePositions[rider.name];
+            // For final positions, lower number = better, so we negate to make it work with our descending sort
+            return 1000 - window.racePositions[rider.name];
         }
-        
-        return {
-            ...rider,
-            racePosition: racePosition
-        };
-    });
+        // Otherwise use total points (higher = better)
+        return rider.totalPoints || 0;
+    };
     
-    // Sort by race position if available, otherwise by points (which represents current GC)
-    ridersWithPositions.sort((a, b) => {
-        if (a.racePosition !== null && b.racePosition !== null) {
-            return a.racePosition - b.racePosition; // Both have final positions, sort by position
-        }
-        if (a.racePosition !== null) return -1; // a has final position, put it first
-        if (b.racePosition !== null) return 1; // b has final position, put it first
-        return b.totalPoints - a.totalPoints; // Neither has final position, sort by current points (GC)
-    });
+    const riderRankings = calculateTiedRankings(allRiders, riderScoreFunction);
     
-    ridersWithPositions.forEach((rider, index) => {
+    riderRankings.forEach((rankingEntry) => {
+        const rider = rankingEntry.item;
+        const position = rankingEntry.rank;
         const row = document.createElement('tr');
         const statusClass = rider.status === 'dropped' ? 'rider-dropped' : '';
         
@@ -63,15 +53,7 @@ function loadRidersTable() {
         const statusIcon = rider.status === 'dropped' ? '🔴 Uitgevallen' : '🟢 Actief';
         const rowClass = rider.status === 'dropped' ? 'rider-dropped-row' : '';
         
-        // Show actual race position if available, otherwise show current general classification position
-        let displayPosition;
-        if (rider.racePosition !== null) {
-            // Final race position available
-            displayPosition = rider.racePosition;
-        } else {
-            // During race: show position based on current points (general classification)
-            displayPosition = index + 1;
-        }
+        const displayPosition = position;
         
         row.className = rowClass;
         row.innerHTML = `
@@ -255,11 +237,11 @@ function loadRankingTable() {
                 
                 if (stageData.positionChange < 0) {
                     // Moved up (negative change - better position)
-                    changeText = `${stageData.positionChange}`;
+                    changeText = `▲${Math.abs(stageData.positionChange)}`;
                     changeClass = 'ranking-up';
                 } else if (stageData.positionChange > 0) {
                     // Moved down (positive change - worse position)
-                    changeText = `+${stageData.positionChange}`;
+                    changeText = `▼${stageData.positionChange}`;
                     changeClass = 'ranking-down';
                 } else {
                     // No change
@@ -300,7 +282,9 @@ function loadDailyPrizesTable() {
     }
     
     tbody.innerHTML = '';
-    participants.sort((a, b) => b.totalPoints - a.totalPoints);
+    
+    // Calculate tied rankings for participants based on total points
+    const participantRankings = calculateTiedRankings(participants, (p) => p.totalPoints);
     
     const dailyWinners = [];
     const generalLeaders = [];
@@ -339,7 +323,9 @@ function loadDailyPrizesTable() {
         generalLeaders[stage] = leaders;
     }
     
-    participants.forEach((participant, index) => {
+    participantRankings.forEach((rankingEntry) => {
+        const participant = rankingEntry.item;
+        const position = rankingEntry.rank;
         const row = document.createElement('tr');
         
         // Tel blauwe en gele truien voor deze participant
@@ -388,7 +374,7 @@ function loadDailyPrizesTable() {
         }
         
         row.innerHTML = `
-            <td><strong>${index + 1}</strong></td>
+            <td><strong>${position}</strong></td>
             <td>${participant.name}</td>
             ${stagePointsHtml}
             ${totalColumnHtml}
@@ -488,11 +474,12 @@ function updatePodiumContent(type, ranking, scoreType) {
         scoreGroups.push({score: currentScore, participants: currentGroup});
     }
     
-    // Display top 3 positions (accounting for ties)
+    // Only show podium positions that actually exist (1st, 2nd, 3rd)
+    // If everyone is tied for 1st, only show 1st place
+    // If 1st and 2nd are tied, only show 1st and 3rd places, etc.
     let position = 1;
-    let positionCount = 0;
     
-    for (let groupIndex = 0; groupIndex < scoreGroups.length && positionCount < 3; groupIndex++) {
+    for (let groupIndex = 0; groupIndex < scoreGroups.length && position <= 3; groupIndex++) {
         const group = scoreGroups[groupIndex];
         
         // Create ONE shared podium place for all tied participants
@@ -517,12 +504,40 @@ function updatePodiumContent(type, ranking, scoreType) {
 
         const positionClass = position === 1 ? 'first' : (position === 2 ? 'second' : 'third');
         
-        // Create names list with line breaks (max 3 names)
-        const limitedParticipants = group.participants.slice(0, 3);
-        const namesHtml = limitedParticipants.map(p => p.name).join('<br>');
+        // Determine max participants and create names list
+        let maxParticipants, limitedParticipants, namesHtml, isClickable = false;
+        
+        if (position === 1) {
+            // Gold: show all tied participants (no limit)
+            limitedParticipants = group.participants;
+            namesHtml = limitedParticipants.map(p => p.name).join('<br>');
+        } else if (position === 2) {
+            // Silver: show max 6, make clickable if more
+            maxParticipants = 6;
+            limitedParticipants = group.participants.slice(0, maxParticipants);
+            if (group.participants.length > maxParticipants) {
+                namesHtml = `${limitedParticipants.map(p => p.name).join('<br>')}<br><span style="color: #007bff; text-decoration: underline; cursor: pointer;">+${group.participants.length - maxParticipants} meer...</span>`;
+                isClickable = true;
+            } else {
+                namesHtml = limitedParticipants.map(p => p.name).join('<br>');
+            }
+        } else {
+            // Bronze: show max 3, make clickable if more
+            maxParticipants = 3;
+            limitedParticipants = group.participants.slice(0, maxParticipants);
+            if (group.participants.length > maxParticipants) {
+                namesHtml = `${limitedParticipants.map(p => p.name).join('<br>')}<br><span style="color: #007bff; text-decoration: underline; cursor: pointer;">+${group.participants.length - maxParticipants} meer...</span>`;
+                isClickable = true;
+            } else {
+                namesHtml = limitedParticipants.map(p => p.name).join('<br>');
+            }
+        }
+        
+        const clickableClass = isClickable ? 'podium-clickable' : '';
+        const clickHandler = isClickable ? `onclick="showPodiumModal('${positionClass}', '${position}', '${scoreType}', '${JSON.stringify(group.participants).replace(/"/g, '&quot;')}', '${points}', '${subtitle.replace(/'/g, '\\\'')}')"` : '';
         
         podiumHtml += `
-            <div class="podium-place ${positionClass}">
+            <div class="podium-place ${positionClass} ${clickableClass}" ${clickHandler}>
                 <div class="podium-number">${position}</div>
                 <div class="podium-name">${namesHtml}</div>
                 <div class="podium-points">${points}</div>
@@ -532,7 +547,6 @@ function updatePodiumContent(type, ranking, scoreType) {
         
         // Update position based on how many participants were in this score group (Dutch/European style)
         position += group.participants.length;
-        positionCount++;
     }
     
     const podiums = document.querySelectorAll('.podium .podium-places');
@@ -703,20 +717,39 @@ function updateOverviewBlock(dailyRanking, generalRanking, dailyWinsRanking, las
     const dailyWinsLeaders = getTopScorers(dailyWinsRanking, 'wins');
     
     // Update daily winners (blue jersey)
-    const dailyNamesHtml = dailyWinners.map(p => p.name).join('<br>');
+    const dailyNamesHtml = dailyWinners.length > 3 ? 'Klik voor alle winnaars' : dailyWinners.map(p => p.name).join('<br>');
     document.getElementById('overviewDailyWinner').innerHTML = dailyNamesHtml || '-';
     const dailyPoints = dailyWinners.length > 0 ? (dailyWinners[0].stagePoints[lastStageIndex] || 0) : 0;
     document.getElementById('overviewDailyStats').textContent = `${dailyPoints} punten`;
     
     // Update general leaders (yellow jersey)
-    const generalNamesHtml = generalLeaders.map(p => p.name).join('<br>');
+    const generalNamesHtml = generalLeaders.length > 3 ? 'Klik voor alle winnaars' : generalLeaders.map(p => p.name).join('<br>');
     document.getElementById('overviewGeneralWinner').innerHTML = generalNamesHtml || '-';
     const totalPoints = generalLeaders.length > 0 ? generalLeaders[0].totalPoints : 0;
     document.getElementById('overviewGeneralStats').textContent = `${totalPoints} punten totaal`;
     
     // Update most daily wins (milka bar)
-    const dailyWinsNamesHtml = dailyWinsLeaders.map(p => p.name).join('<br>');
-    document.getElementById('overviewDailyWinsWinner').innerHTML = dailyWinsNamesHtml || '-';
+    const dailyWinsNamesHtml = dailyWinsLeaders.length > 3 ? 'Klik voor alle winnaars' : dailyWinsLeaders.map(p => p.name).join('<br>');
+    const dailyWinsElement = document.getElementById('overviewDailyWinsWinner');
+    dailyWinsElement.innerHTML = dailyWinsNamesHtml || '-';
+    
+    // Make Milka bar card clickable when there are ties
+    const dailyWinsCard = dailyWinsElement.closest('.overview-item');
+    if (dailyWinsCard) {
+        if (dailyWinsLeaders.length > 3) {
+            dailyWinsCard.style.cursor = 'pointer';
+            dailyWinsCard.onclick = () => {
+                // Switch to Classement Général tab
+                const tabs = document.querySelectorAll('.tab-button');
+                const classementTab = Array.from(tabs).find(tab => tab.textContent.includes('Classement'));
+                if (classementTab) classementTab.click();
+            };
+        } else {
+            dailyWinsCard.style.cursor = 'default';
+            dailyWinsCard.onclick = null;
+        }
+    }
+    
     const dailyWins = dailyWinsLeaders.length > 0 ? dailyWinsLeaders[0].dailyWins : 0;
     document.getElementById('overviewDailyWinsStats').textContent = `${dailyWins} dagoverwinning${dailyWins !== 1 ? 'en' : ''}`;
     
@@ -728,7 +761,27 @@ function updateOverviewBlock(dailyRanking, generalRanking, dailyWinsRanking, las
     const improverStatsElement = document.getElementById('overviewImproverStats');
     
     if (biggestImprover) {
-        improverElement.innerHTML = biggestImprover.name; // Already contains line breaks from calculateBiggestImprovement
+        // Show names or "Klik voor alle winnaars" based on count
+        const improverNames = biggestImprover.totalCount > 3 ? 'Klik voor alle winnaars' : biggestImprover.name;
+        improverElement.innerHTML = improverNames;
+        
+        // Make green arrow card clickable when there are ties
+        const improverCard = improverElement.closest('.overview-item');
+        if (improverCard) {
+            if (biggestImprover.totalCount > 3) {
+                improverCard.style.cursor = 'pointer';
+                improverCard.onclick = () => {
+                    // Switch to Ranking tab
+                    const tabs = document.querySelectorAll('.tab-button');
+                    const rankingTab = Array.from(tabs).find(tab => tab.textContent.includes('Ranking'));
+                    if (rankingTab) rankingTab.click();
+                };
+            } else {
+                improverCard.style.cursor = 'default';
+                improverCard.onclick = null;
+            }
+        }
+        
         const improvementText = biggestImprover.improvement > 0 ? 
             `Gestegen ${biggestImprover.improvement} positie${biggestImprover.improvement !== 1 ? 's' : ''}` :
             'Geen stijging';
@@ -736,6 +789,13 @@ function updateOverviewBlock(dailyRanking, generalRanking, dailyWinsRanking, las
     } else {
         improverElement.textContent = '-';
         improverStatsElement.textContent = 'Geen data';
+        
+        // Remove any click handlers when no data
+        const improverCard = improverElement.closest('.overview-item');
+        if (improverCard) {
+            improverCard.style.cursor = 'default';
+            improverCard.onclick = null;
+        }
     }
 }
 
@@ -767,7 +827,11 @@ function calculateBiggestImprovement() {
     if (biggestImprovement > 0) {
         const limitedImprovers = improvers.slice(0, 3); // Max 3 names
         const improverNames = limitedImprovers.join('<br>');
-        return { name: improverNames, improvement: biggestImprovement };
+        return { 
+            name: improverNames, 
+            improvement: biggestImprovement, 
+            totalCount: improvers.length 
+        };
     }
     
     return null;
@@ -1006,8 +1070,8 @@ function updateRankingLegenda(risers, droppers, same) {
         // For stage 1, show the default explanation
         legendaElement.innerHTML = `
             <strong>Legenda:</strong> Eerste etappe toont positie, daarna positieverandering: 
-            <span style="color: #28a745; font-weight: bold;">-4 Gestegen</span>, 
-            <span style="color: #dc3545; font-weight: bold;">+7 Gedaald</span>, 
+            <span style="color: #28a745; font-weight: bold;">▲4 Gestegen</span>, 
+            <span style="color: #dc3545; font-weight: bold;">▼7 Gedaald</span>, 
             <span style="color: #6c757d; font-weight: bold;">0 Gelijk</span>
         `;
     } else {
@@ -1368,12 +1432,13 @@ function updateSelectedPodiumContent(podiumPlacesId, ranking, scoreType) {
         scoreGroups.push({score: currentScore, participants: currentGroup});
     }
     
-    // Display top 3 positions
+    // Only show podium positions that actually exist (1st, 2nd, 3rd)
+    // If everyone is tied for 1st, only show 1st place
+    // If 1st and 2nd are tied, only show 1st and 3rd places, etc.
     let podiumHtml = '';
     let position = 1;
-    let positionCount = 0;
     
-    for (let groupIndex = 0; groupIndex < scoreGroups.length && positionCount < 3; groupIndex++) {
+    for (let groupIndex = 0; groupIndex < scoreGroups.length && position <= 3; groupIndex++) {
         const group = scoreGroups[groupIndex];
         let points, subtitle;
         
@@ -1387,16 +1452,44 @@ function updateSelectedPodiumContent(podiumPlacesId, ranking, scoreType) {
         
         const positionClass = position === 1 ? 'first' : (position === 2 ? 'second' : 'third');
         
-        // Create names list (max 3 names)
-        const limitedParticipants = group.participants.slice(0, 3);
-        const namesHtml = limitedParticipants.map(p => p.name).join('<br>');
+        // Determine max participants and create names list
+        let maxParticipants, limitedParticipants, namesHtml, isClickable = false;
+        
+        if (position === 1) {
+            // Gold: show all tied participants (no limit)
+            limitedParticipants = group.participants;
+            namesHtml = limitedParticipants.map(p => p.name).join('<br>');
+        } else if (position === 2) {
+            // Silver: show max 6, make clickable if more
+            maxParticipants = 6;
+            limitedParticipants = group.participants.slice(0, maxParticipants);
+            if (group.participants.length > maxParticipants) {
+                namesHtml = `${limitedParticipants.map(p => p.name).join('<br>')}<br><span style="color: #007bff; text-decoration: underline; cursor: pointer;">+${group.participants.length - maxParticipants} meer...</span>`;
+                isClickable = true;
+            } else {
+                namesHtml = limitedParticipants.map(p => p.name).join('<br>');
+            }
+        } else {
+            // Bronze: show max 3, make clickable if more
+            maxParticipants = 3;
+            limitedParticipants = group.participants.slice(0, maxParticipants);
+            if (group.participants.length > maxParticipants) {
+                namesHtml = `${limitedParticipants.map(p => p.name).join('<br>')}<br><span style="color: #007bff; text-decoration: underline; cursor: pointer;">+${group.participants.length - maxParticipants} meer...</span>`;
+                isClickable = true;
+            } else {
+                namesHtml = limitedParticipants.map(p => p.name).join('<br>');
+            }
+        }
         
         if (group.participants.length > 1) {
             subtitle = `${subtitle} (gedeeld)`;
         }
         
+        const clickableClass = isClickable ? 'podium-clickable' : '';
+        const clickHandler = isClickable ? `onclick="showPodiumModal('${positionClass}', '${position}', '${scoreType}', '${JSON.stringify(group.participants).replace(/"/g, '&quot;')}', '${points}', '${subtitle.replace(/'/g, '\\\'')}')"` : '';
+        
         podiumHtml += `
-            <div class="podium-place ${positionClass}">
+            <div class="podium-place ${positionClass} ${clickableClass}" ${clickHandler}>
                 <div class="podium-number">${position}</div>
                 <div class="podium-name">${namesHtml}</div>
                 <div class="podium-points">${points}</div>
@@ -1405,7 +1498,6 @@ function updateSelectedPodiumContent(podiumPlacesId, ranking, scoreType) {
         `;
         
         position += group.participants.length;
-        positionCount++;
     }
     
     podiumPlaces.innerHTML = podiumHtml;
@@ -1566,33 +1658,32 @@ function displayStageParticipantsTable(stageNum) {
     
     const stageIndex = stageNum - 1; // Convert to 0-based index
     
-    // Sort participants by cumulative points up to this stage
-    const stageRanking = [...participants].sort((a, b) => {
+    // Calculate tied rankings for this stage
+    const scoreFunction = (participant) => {
         if (stageNum === 22) {
-            return b.totalPoints - a.totalPoints; // Final classification
+            return participant.totalPoints; // Final classification
         } else {
             // Calculate cumulative points up to this stage
-            const aCumulative = a.stagePoints.slice(0, stageIndex + 1).reduce((sum, p) => sum + (p || 0), 0);
-            const bCumulative = b.stagePoints.slice(0, stageIndex + 1).reduce((sum, p) => sum + (p || 0), 0);
-            return bCumulative - aCumulative;
+            return participant.stagePoints.slice(0, stageIndex + 1).reduce((sum, p) => sum + (p || 0), 0);
         }
-    });
+    };
+    
+    const stageRankings = calculateTiedRankings(participants, scoreFunction);
     
     // Calculate position changes from previous stage (only for regular stages)
-    let previousRanking = null;
+    let previousRankings = null;
     if (stageNum > 1 && stageNum <= 21) {
         const prevStageIndex = stageIndex - 1;
-        previousRanking = [...participants].sort((a, b) => {
-            // Calculate cumulative points up to previous stage
-            const aTotalToPrev = a.stagePoints.slice(0, prevStageIndex + 1).reduce((sum, p) => sum + (p || 0), 0);
-            const bTotalToPrev = b.stagePoints.slice(0, prevStageIndex + 1).reduce((sum, p) => sum + (p || 0), 0);
-            return bTotalToPrev - aTotalToPrev;
-        });
+        const prevScoreFunction = (participant) => {
+            return participant.stagePoints.slice(0, prevStageIndex + 1).reduce((sum, p) => sum + (p || 0), 0);
+        };
+        previousRankings = calculateTiedRankings(participants, prevScoreFunction);
     }
     
     // Add participants to table
-    stageRanking.forEach((participant, index) => {
-        const position = index + 1;
+    stageRankings.forEach((rankingEntry) => {
+        const participant = rankingEntry.item;
+        const position = rankingEntry.rank;
         
         // Calculate stage-specific points and cumulative total
         let stageSpecificPoints, cumulativePoints;
@@ -1610,14 +1701,15 @@ function displayStageParticipantsTable(stageNum) {
         
         // Calculate position change
         let positionChange = '';
-        if (previousRanking && stageNum > 1) {
-            const prevPosition = previousRanking.findIndex(p => p.name === participant.name) + 1;
+        if (previousRankings && stageNum > 1) {
+            const prevRankingEntry = previousRankings.find(r => r.item.name === participant.name);
+            const prevPosition = prevRankingEntry ? prevRankingEntry.rank : 0;
             const change = prevPosition - position;
             
             if (change > 0) {
-                positionChange = `<span style="color: #28a745; font-weight: bold;">+${change}</span>`;
+                positionChange = `<span style="color: #28a745; font-weight: bold;">▲${change}</span>`;
             } else if (change < 0) {
-                positionChange = `<span style="color: #dc3545; font-weight: bold;">${change}</span>`;
+                positionChange = `<span style="color: #dc3545; font-weight: bold;">▼${Math.abs(change)}</span>`;
             } else {
                 positionChange = `<span style="color: #6c757d;">0</span>`;
             }
@@ -2099,5 +2191,88 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => {
             initMobilePillSelectors();
         }, 1000); // Wait for data to load
+    }
+});
+
+// ============= PODIUM MODAL =============
+
+function showPodiumModal(positionClass, position, scoreType, participantsJson, points, subtitle) {
+    const participants = JSON.parse(participantsJson.replace(/&quot;/g, '"'));
+    
+    // Create modal HTML
+    const modalHtml = `
+        <div id="podiumModal" class="podium-modal">
+            <div class="podium-modal-content">
+                <div class="podium-modal-header">
+                    <h2 class="podium-modal-title">
+                        ${parseInt(position) === 2 ? '🥈 Zilveren Medaille' : '🥉 Bronzen Medaille'}
+                    </h2>
+                    <button class="podium-modal-close" onclick="closePodiumModal()">&times;</button>
+                </div>
+                
+                <div class="podium-modal-body">
+                    <div class="festive-podium ${positionClass}">
+                        <div class="confetti-container">
+                            <div class="confetti"></div>
+                            <div class="confetti"></div>
+                            <div class="confetti"></div>
+                            <div class="confetti"></div>
+                            <div class="confetti"></div>
+                        </div>
+                        
+                        <div class="podium-modal-card">
+                            <div class="podium-modal-points">${points}</div>
+                            
+                            <div class="podium-modal-participants">
+                                <div class="participants-grid">
+                                    ${participants.map((p, index) => `
+                                        <div class="participant-item">
+                                            <span class="participant-number">${position}</span>
+                                            <span class="participant-name">${p.name}</span>
+                                            <span class="participant-medal">${parseInt(position) === 2 ? '🥈' : '🥉'}</span>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Add modal to page
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    // Show modal with animation
+    const modal = document.getElementById('podiumModal');
+    setTimeout(() => modal.classList.add('show'), 10);
+    
+    // Prevent body scroll
+    document.body.style.overflow = 'hidden';
+}
+
+function closePodiumModal() {
+    const modal = document.getElementById('podiumModal');
+    if (modal) {
+        modal.classList.remove('show');
+        setTimeout(() => {
+            modal.remove();
+            document.body.style.overflow = '';
+        }, 300);
+    }
+}
+
+// Close modal when clicking outside
+document.addEventListener('click', (e) => {
+    if (e.target.classList.contains('podium-modal')) {
+        closePodiumModal();
+    }
+});
+
+// Close modal with Escape key
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        closePodiumModal();
     }
 });

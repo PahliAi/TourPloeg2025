@@ -4,6 +4,36 @@ let participants = [];
 let allRiders = [];
 let currentStage = 1;
 
+// Utility function to calculate tied rankings
+function calculateTiedRankings(items, scoreFunction) {
+    const itemsWithScores = items.map(item => ({
+        item: item,
+        score: scoreFunction(item)
+    }));
+    
+    // Sort by score (descending)
+    itemsWithScores.sort((a, b) => b.score - a.score);
+    
+    // Calculate rankings with ties
+    const rankings = [];
+    let currentRank = 1;
+    
+    for (let i = 0; i < itemsWithScores.length; i++) {
+        if (i > 0 && itemsWithScores[i].score !== itemsWithScores[i-1].score) {
+            // Score changed, update rank to current position + 1
+            currentRank = i + 1;
+        }
+        
+        rankings.push({
+            item: itemsWithScores[i].item,
+            score: itemsWithScores[i].score,
+            rank: currentRank
+        });
+    }
+    
+    return rankings;
+}
+
 // Ranking history tracking - stores rankings after each stage
 let rankingHistory = []; // Array of arrays: [stage1Rankings, stage2Rankings, ...]
 
@@ -510,19 +540,20 @@ function calculateRankingHistory() {
             });
         });
         
-        // Sort by total points (descending) to get rankings
-        stageRankings.sort((a, b) => b.totalPoints - a.totalPoints);
+        // Calculate tied rankings based on total points
+        const stageRankingsList = calculateTiedRankings(stageRankings, (p) => p.totalPoints);
         
-        // Add position to each participant
-        stageRankings.forEach((participant, index) => {
-            participant.position = index + 1;
-        });
+        // Convert back to original format with tied positions
+        const finalStageRankings = stageRankingsList.map(rankingEntry => ({
+            ...rankingEntry.item,
+            position: rankingEntry.rank
+        }));
         
-        rankingHistory[stageIndex] = stageRankings;
+        rankingHistory[stageIndex] = finalStageRankings;
         
         ErrorHandler.log('RANKING', `Stage ${stageIndex + 1} rankings calculated`, {
-            leader: stageRankings[0].name,
-            points: stageRankings[0].totalPoints
+            leader: finalStageRankings[0].name,
+            points: finalStageRankings[0].totalPoints
         });
     }
     
@@ -1773,9 +1804,9 @@ function updateMyTdfExtendedProgress(teamName) {
             
             const change = prevRank - currentRank;
             if (change > 0) {
-                rankDelta = ` (<span style="color: #28a745;">+${change}</span>)`;
+                rankDelta = ` (<span style="color: #28a745;">▲${change}</span>)`;
             } else if (change < 0) {
-                rankDelta = ` (<span style="color: #dc3545;">${change}</span>)`;
+                rankDelta = ` (<span style="color: #dc3545;">▼${Math.abs(change)}</span>)`;
             } else {
                 rankDelta = ` (<span style="color: #6c757d;">0</span>)`;
             }
